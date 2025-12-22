@@ -43,7 +43,7 @@ export const Assets = {
     const snap = await getDocs(q);
     return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
   },
-  async create(subjectId: string, unitId: string, lessonId: string, data: { type: 'PDF'|'VIDEO'|'LINK'; urlOrKey: string; title: string; language?: string; metadata?: any; version?: number }) {
+  async create(subjectId: string, unitId: string, lessonId: string, data: { type: 'PDF' | 'VIDEO' | 'LINK'; urlOrKey: string; title: string; language?: string; metadata?: any; version?: number }) {
     const ref = await addDoc(collection(db, `subjects/${subjectId}/units/${unitId}/lessons/${lessonId}/assets`), {
       ...data,
       language: data.language ?? 'en',
@@ -53,5 +53,8 @@ export const Assets = {
   },
   async remove(subjectId: string, unitId: string, lessonId: string, assetId: string) {
     await deleteDoc(doc(db, `subjects/${subjectId}/units/${unitId}/lessons/${lessonId}/assets/${assetId}`));
+  },
+  async update(subjectId: string, unitId: string, lessonId: string, assetId: string, data: Partial<{ title: string; urlOrKey: string; type: 'PDF' | 'VIDEO' | 'LINK' }>) {
+    await updateDoc(doc(db, `subjects/${subjectId}/units/${unitId}/lessons/${lessonId}/assets/${assetId}`), data as any);
   },
 };

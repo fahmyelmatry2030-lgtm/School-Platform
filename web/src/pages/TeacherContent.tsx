@@ -145,7 +145,7 @@ export default function TeacherContent() {
       if (!isDemo) {
         if (type === 'unit') await Units.update(subjectId, editingId, { title: editingTitle.trim() });
         else if (type === 'lesson') await Lessons.update(subjectId, unitId, editingId, { title: editingTitle.trim() });
-        // asset update not implemented in content.ts yet, skipping for now
+        else if (type === 'asset') await Assets.update(subjectId, unitId, lessonId, editingId, { title: editingTitle.trim() });
       } else {
         if (type === 'unit') setUnits(units.map(u => u.id === editingId ? { ...u, title: editingTitle.trim() } : u));
         else if (type === 'lesson') setLessons(lessons.map(l => l.id === editingId ? { ...l, title: editingTitle.trim() } : l));
@@ -198,13 +198,14 @@ export default function TeacherContent() {
       let urlOrKey = assetLink.trim();
       if (!isDemo) {
         if (assetType !== 'LINK' && file) {
-          urlOrKey = await uploadContent(file);
+          const res = await uploadContent(lessonId, file);
+          urlOrKey = res.url;
         }
         await Assets.create(subjectId, unitId, lessonId, {
           title: assetTitle.trim(),
           type: assetType,
-          url: urlOrKey,
-        } as any);
+          urlOrKey: urlOrKey,
+        });
       } else {
         const newAsset = { id: 'demo-' + Date.now(), title: assetTitle.trim(), type: assetType, url: urlOrKey };
         setAssets([...assets, newAsset]);
@@ -438,18 +439,36 @@ export default function TeacherContent() {
                     ) : (
                       assets.map((a) => (
                         <div key={a.id} className="asset-item">
-                          <span className="asset-icon">{a.type === 'PDF' ? '📄' : a.type === 'VIDEO' ? '🎥' : '🔗'}</span>
-                          <div className="asset-info">
-                            <div className="asset-title">{a.title}</div>
-                            <div className="asset-type">{a.type}</div>
-                          </div>
-                          <button
-                            className="btn-icon btn-danger-soft"
-                            onClick={() => deleteAsset(a.id)}
-                            title={t('delete')}
-                          >
-                            🗑️
-                          </button>
+                          {editingId === a.id ? (
+                            <div className="edit-form" onClick={e => e.stopPropagation()}>
+                              <input
+                                value={editingTitle}
+                                onChange={e => setEditingTitle(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && saveEdit('asset')}
+                                autoFocus
+                                title="Edit Asset Title"
+                              />
+                              <button className="btn-icon" onClick={() => saveEdit('asset')}>✅</button>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="asset-icon">{a.type === 'PDF' ? '📄' : a.type === 'VIDEO' ? '🎥' : '🔗'}</span>
+                              <div className="asset-info">
+                                <div className="asset-title">{a.title}</div>
+                                <div className="asset-type">{a.type}</div>
+                              </div>
+                              <div className="item-actions">
+                                <button className="btn-icon" onClick={(e) => startEditing(a.id, a.title, e)} title={t('edit')}>✏️</button>
+                                <button
+                                  className="btn-icon btn-danger-soft"
+                                  onClick={() => deleteAsset(a.id)}
+                                  title={t('delete')}
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       ))
                     )}
