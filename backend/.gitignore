@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.prisma/
+.npmrc
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+coverage/
+.DS_Store

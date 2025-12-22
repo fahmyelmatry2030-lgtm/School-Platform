@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function hasRole(role) {
+      return request.auth != null && request.auth.token.role == role;
+    }
+    function isAdmin(){ return hasRole('ADMIN'); }
+    function isTeacher(){ return hasRole('TEACHER'); }
+    function isStudent(){ return hasRole('STUDENT'); }
+    function isAuthenticated(){ return request.auth != null; }
+
+    // Users collection: only admin can create/update roles. Users can read their own profile.
+    match /users/{userId} {
+      allow read: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (request.auth.uid == userId && !("role" in request.resource.data));
+      allow delete: if isAdmin();
+    }
+
+    // Grades, Subjects: admin full, read for all
+    match /grades/{gradeId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /subjects/{subjectId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Classes: admin full, read for all. Enrollment is separate.
+    match /classes/{classId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Enrollment: students can read their enrollments, admin/teacher can read class enrollments. Admin manages.
+    match /enrollments/{enrollmentId} {
+      allow read: if isAdmin() || isTeacher() || (isAuthenticated() && request.auth.uid == resource.data.userId);
+      allow create, delete: if isAdmin();
+      allow update: if false; // Not needed; delete+create instead
+    }
+
+    // Content hierarchy
+    match /subjects/{subjectId}/units/{unitId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isTeacher();
+    }
+
+    match /subjects/{subjectId}/units/{unitId}/lessons/{lessonId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isTeacher();
+    }
+
+    match /subjects/{subjectId}/units/{unitId}/lessons/{lessonId}/assets/{assetId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isTeacher();
+    }
+
+    // Assignments and questions
+    match /lessons/{lessonId}/assignments/{assignmentId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isTeacher();
+    }
+
+    match /lessons/{lessonId}/assignments/{assignmentId}/questions/{questionId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isTeacher();
+    }
+
+    // Submissions: student can create/read own; teacher/admin can read by assignment/class context (simplified here)
+    match /assignments/{assignmentId}/submissions/{submissionId} {
+      allow create: if isStudent() && request.resource.data.studentId == request.auth.uid;
+      allow read: if isAdmin() || isTeacher() || (isStudent() && resource.data.studentId == request.auth.uid);
+      allow update: if false; // use grading document
+      allow delete: if isAdmin();
+    }
+
+    // Grades: teacher/admin can write; student reads own
+    match /submissions/{submissionId}/gradeItem {
+      allow read: if isAdmin() || isTeacher() || (isStudent() && resource.data.studentId == request.auth.uid);
+      allow create, update: if isAdmin() || isTeacher();
+      allow delete: if isAdmin();
+    }
+  }
+}

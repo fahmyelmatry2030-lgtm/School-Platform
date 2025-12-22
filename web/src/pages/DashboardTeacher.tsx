@@ -1,0 +1,226 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
+
+export default function DashboardTeacher() {
+  const { t } = useTranslation();
+
+  return (
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <h1>{t('teacherDashboard')}</h1>
+        <p className="dashboard-subtitle">{t('welcome')}</p>
+      </div>
+
+      <div className="grid grid-3">
+        <Card className="stat-card">
+          <CardContent>
+            <div className="stat-icon">📚</div>
+            <div className="stat-value">8</div>
+            <div className="stat-label">{t('subjects')}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="stat-card">
+          <CardContent>
+            <div className="stat-icon">📝</div>
+            <div className="stat-value">24</div>
+            <div className="stat-label">{t('assignments')}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="stat-card">
+          <CardContent>
+            <div className="stat-icon">👥</div>
+            <div className="stat-value">156</div>
+            <div className="stat-label">Students</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="quick-actions">
+              <a href="/teacher/content" className="action-button">
+                <span className="action-icon">📚</span>
+                <div>
+                  <div className="action-title">{t('content')}</div>
+                  <div className="action-desc">Manage units, lessons & assets</div>
+                </div>
+              </a>
+
+              <a href="/teacher/assessments" className="action-button">
+                <span className="action-icon">📝</span>
+                <div>
+                  <div className="action-title">{t('assessments')}</div>
+                  <div className="action-desc">Create assignments & quizzes</div>
+                </div>
+              </a>
+
+              <div className="action-button" style={{ opacity: 0.6, cursor: 'not-allowed' }}>
+                <span className="action-icon">📊</span>
+                <div>
+                  <div className="action-title">Reports</div>
+                  <div className="action-desc">View student performance</div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="activity-list">
+              <div className="activity-item">
+                <div className="activity-icon">✅</div>
+                <div className="activity-content">
+                  <div className="activity-title">New submission from Ahmed</div>
+                  <div className="activity-time">5 minutes ago</div>
+                </div>
+              </div>
+
+              <div className="activity-item">
+                <div className="activity-icon">📝</div>
+                <div className="activity-content">
+                  <div className="activity-title">Created Math Quiz #3</div>
+                  <div className="activity-time">2 hours ago</div>
+                </div>
+              </div>
+
+              <div className="activity-item">
+                <div className="activity-icon">👥</div>
+                <div className="activity-content">
+                  <div className="activity-title">12 students completed assignment</div>
+                  <div className="activity-time">Yesterday</div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <style>{`
+        .dashboard-container {
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+
+        .dashboard-header {
+          margin-bottom: var(--spacing-xl);
+        }
+
+        .dashboard-header h1 {
+          font-size: var(--font-size-4xl);
+          margin-bottom: var(--spacing-xs);
+        }
+
+        .dashboard-subtitle {
+          font-size: var(--font-size-lg);
+          color: var(--text-secondary);
+        }
+
+        .stat-card .card-content {
+          text-align: center;
+          padding: var(--spacing-xl);
+        }
+
+        .stat-icon {
+          font-size: 3rem;
+          margin-bottom: var(--spacing-md);
+        }
+
+        .stat-value {
+          font-size: var(--font-size-4xl);
+          font-weight: var(--font-weight-bold);
+          color: var(--primary-600);
+          margin-bottom: var(--spacing-xs);
+        }
+
+        .stat-label {
+          font-size: var(--font-size-sm);
+          color: var(--text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        .quick-actions {
+          display: flex;
+          flex-direction: column;
+          gap: var(--spacing-md);
+        }
+
+        .action-button {
+          display: flex;
+          align-items: center;
+          gap: var(--spacing-md);
+          padding: var(--spacing-md);
+          background-color: var(--bg-tertiary);
+          border-radius: var(--radius-md);
+          transition: all var(--transition-fast);
+          text-decoration: none;
+          color: inherit;
+        }
+
+        .action-button:hover {
+          background-color: var(--primary-50);
+          transform: translateX(4px);
+        }
+
+        .action-icon {
+          font-size: 2rem;
+        }
+
+        .action-title {
+          font-weight: var(--font-weight-semibold);
+          color: var(--text-primary);
+          margin-bottom: var(--spacing-xs);
+        }
+
+        .action-desc {
+          font-size: var(--font-size-sm);
+          color: var(--text-secondary);
+        }
+
+        .activity-list {
+          display: flex;
+          flex-direction: column;
+          gap: var(--spacing-md);
+        }
+
+        .activity-item {
+          display: flex;
+          gap: var(--spacing-md);
+          padding: var(--spacing-md);
+          background-color: var(--bg-tertiary);
+          border-radius: var(--radius-md);
+        }
+
+        .activity-icon {
+          font-size: 1.5rem;
+        }
+
+        .activity-content {
+          flex: 1;
+        }
+
+        .activity-title {
+          font-weight: var(--font-weight-medium);
+          color: var(--text-primary);
+          margin-bottom: var(--spacing-xs);
+        }
+
+        .activity-time {
+          font-size: var(--font-size-sm);
+          color: var(--text-secondary);
+        }
+      `}</style>
+    </div>
+  );
+}

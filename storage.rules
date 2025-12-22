@@ -1,0 +1,21 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function hasRole(role) { return request.auth != null && request.auth.token.role == role; }
+    function isAdmin(){ return hasRole('ADMIN'); }
+    function isTeacher(){ return hasRole('TEACHER'); }
+    function isStudent(){ return hasRole('STUDENT'); }
+
+    // Content uploads under /content/{lessonId}/{filename}
+    match /content/{lessonId}/{fileName} {
+      allow read: if true; // everyone can read content assets
+      allow write: if isAdmin() || isTeacher(); // only staff can upload/modify
+    }
+
+    // Submission uploads under /submissions/{submissionId}/{filename}
+    match /submissions/{submissionId}/{fileName} {
+      allow read: if isAdmin() || isTeacher() || (isStudent() && resource.metadata.studentId == request.auth.uid);
+      allow write: if isStudent() && request.auth != null;
+    }
+  }
+}

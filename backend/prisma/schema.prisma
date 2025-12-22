@@ -1,0 +1,222 @@
+// Prisma schema for School Platform
+// DB: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(uuid()) @db.Uuid
+  email        String       @unique
+  passwordHash String
+  role         Role
+  firstName    String
+  lastName     String
+  locale       String       @default("en")
+  active       Boolean      @default(true)
+  enrollments  Enrollment[]
+  classesTaught Class[]     @relation("HomeroomTeacher")
+  classSubjects ClassSubject[]
+  messages     Message[]    @relation("SenderMessages")
+  gradesGiven  GradeItem[]  @relation("GradedBy")
+  submissions  Submission[] @relation("StudentSubmissions")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+model Grade {
+  id      String  @id @default(uuid()) @db.Uuid
+  name    String  @unique
+  classes Class[]
+}
+
+model Class {
+  id        String  @id @default(uuid()) @db.Uuid
+  name      String
+  gradeId   String  @db.Uuid
+  grade     Grade   @relation(fields: [gradeId], references: [id])
+
+  homeroomTeacherId String? @db.Uuid
+  homeroomTeacher   User?   @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
+
+  enrollments  Enrollment[]
+  classSubjects ClassSubject[]
+  messages     Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, gradeId])
+}
+
+model Subject {
+  id      String  @id @default(uuid()) @db.Uuid
+  name    String  @unique
+  code    String?
+  units   Unit[]
+  classSubjects ClassSubject[]
+}
+
+model ClassSubject {
+  id        String  @id @default(uuid()) @db.Uuid
+  classId   String  @db.Uuid
+  subjectId String  @db.Uuid
+  teacherId String  @db.Uuid
+
+  class     Class   @relation(fields: [classId], references: [id])
+  subject   Subject @relation(fields: [subjectId], references: [id])
+  teacher   User    @relation(fields: [teacherId], references: [id])
+
+  @@unique([classId, subjectId])
+}
+
+model Enrollment {
+  id       String @id @default(uuid()) @db.Uuid
+  userId   String @db.Uuid
+  classId  String @db.Uuid
+  enrolledAt DateTime @default(now())
+
+  user   User  @relation(fields: [userId], references: [id])
+  class  Class @relation(fields: [classId], references: [id])
+
+  @@unique([userId, classId])
+}
+
+model Unit {
+  id         String  @id @default(uuid()) @db.Uuid
+  subjectId  String  @db.Uuid
+  title      String
+  orderIndex Int     @default(0)
+
+  subject Subject @relation(fields: [subjectId], references: [id])
+  lessons Lesson[]
+}
+
+model Lesson {
+  id         String  @id @default(uuid()) @db.Uuid
+  unitId     String  @db.Uuid
+  title      String
+  orderIndex Int     @default(0)
+
+  unit         Unit          @relation(fields: [unitId], references: [id])
+  contentAssets ContentAsset[]
+  assignments   Assignment[]
+}
+
+model ContentAsset {
+  id        String  @id @default(uuid()) @db.Uuid
+  lessonId  String  @db.Uuid
+  type      ContentType
+  urlOrKey  String
+  title     String
+  language  String  @default("en")
+  metadata  Json?
+  version   Int     @default(1)
+
+  lesson Lesson @relation(fields: [lessonId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ContentType {
+  PDF
+  VIDEO
+  LINK
+}
+
+model Assignment {
+  id        String   @id @default(uuid()) @db.Uuid
+  lessonId  String   @db.Uuid
+  title     String
+  instructions String?
+  dueAt     DateTime?
+  kind      AssignmentKind @default(ASSIGNMENT)
+  settings  Json?
+
+  lesson      Lesson      @relation(fields: [lessonId], references: [id])
+  questions   Question[]
+  submissions Submission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum AssignmentKind {
+  ASSIGNMENT
+  QUIZ
+}
+
+model Question {
+  id            String   @id @default(uuid()) @db.Uuid
+  assignmentId  String   @db.Uuid
+  type          QuestionType
+  prompt        String
+  options       Json?
+  answerKey     Json?
+  points        Int      @default(1)
+  language      String   @default("en")
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id])
+}
+
+enum QuestionType {
+  MCQ
+  SHORT
+  TRUE_FALSE
+}
+
+model Submission {
+  id           String   @id @default(uuid()) @db.Uuid
+  assignmentId String   @db.Uuid
+  studentId    String   @db.Uuid
+  submittedAt  DateTime @default(now())
+  responses    Json?
+  status       SubmissionStatus @default(SUBMITTED)
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id])
+  student    User       @relation("StudentSubmissions", fields: [studentId], references: [id])
+  gradeItem  GradeItem?
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  GRADED
+}
+
+model GradeItem {
+  id            String   @id @default(uuid()) @db.Uuid
+  submissionId  String   @unique @db.Uuid
+  score         Float
+  rubric        Json?
+  gradedById    String   @db.Uuid
+  gradedAt      DateTime @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id])
+  gradedBy   User       @relation("GradedBy", fields: [gradedById], references: [id])
+}
+
+model Message {
+  id        String  @id @default(uuid()) @db.Uuid
+  senderId  String  @db.Uuid
+  classId   String? @db.Uuid
+  content   String
+  createdAt DateTime @default(now())
+  pinned    Boolean  @default(false)
+
+  sender User  @relation("SenderMessages", fields: [senderId], references: [id])
+  class  Class? @relation(fields: [classId], references: [id])
+}
