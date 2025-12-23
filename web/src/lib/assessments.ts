@@ -50,6 +50,11 @@ export const Submissions = {
     const snap = await getDocs(q);
     return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
   },
+  async listAll() {
+    const q = query(collection(db, 'submissions'), orderBy('submittedAt', 'desc'));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+  },
   async submit(assignmentId: string, data: { studentId: string; studentName: string; answers: any; fileUrl?: string }) {
     const ref = await addDoc(collection(db, `assignments/${assignmentId}/submissions`), {
       ...data,

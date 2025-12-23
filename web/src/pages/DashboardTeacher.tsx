@@ -9,6 +9,7 @@ export default function DashboardTeacher() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ subjects: 0, assignments: 0, students: 0 });
+  const [submissions, setSubmissions] = useState<any[]>([]);
 
   const isDemo = !db;
 
@@ -18,16 +19,22 @@ export default function DashboardTeacher() {
       try {
         if (isDemo) {
           setStats({ subjects: 8, assignments: 24, students: 156 });
+          setSubmissions([
+            { id: '1', studentName: 'Ahmed', studentId: 'u3', submittedAt: { seconds: Date.now() / 1000 - 300 } },
+            { id: '2', studentName: 'Sara', studentId: 'u4', submittedAt: { seconds: Date.now() / 1000 - 7200 } }
+          ]);
         } else {
-          const [s, u] = await Promise.all([
+          const [s, u, subs] = await Promise.all([
             Subjects.list(),
-            Users.list()
+            Users.list(),
+            Submissions.listAll()
           ]);
           setStats({
             subjects: s.length,
             assignments: 0, // Placeholder
             students: u.filter(user => user.role === 'STUDENT').length
           });
+          setSubmissions(subs);
         }
       } catch (e) {
         console.error(e);
@@ -39,6 +46,12 @@ export default function DashboardTeacher() {
   }, [isDemo]);
 
   if (loading) return <div className="loading-container" style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><LoadingSpinner size="lg" /></div>;
+
+  const formatDate = (ts: any) => {
+    if (!ts) return '—';
+    const date = new Date(ts.seconds * 1000);
+    return date.toLocaleString();
+  };
 
   return (
     <div className="dashboard-container">
@@ -113,9 +126,23 @@ export default function DashboardTeacher() {
           </CardHeader>
           <CardContent>
             <div className="activity-list">
-              <div className="empty-state" style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
-                {t('noData')}
-              </div>
+              {submissions.length === 0 ? (
+                <div className="empty-state" style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
+                  {t('noData')}
+                </div>
+              ) : (
+                submissions.map((sub: any) => (
+                  <div key={sub.id} className="activity-item">
+                    <div className="activity-icon">✅</div>
+                    <div className="activity-content">
+                      <div className="activity-title">
+                        {t('newSubmissionFrom', { name: sub.studentName })}
+                      </div>
+                      <div className="activity-time">{formatDate(sub.submittedAt)}</div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
