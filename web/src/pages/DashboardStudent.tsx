@@ -7,7 +7,6 @@ import { Submissions, Assignments } from '../lib/assessments';
 import { Subjects } from '../lib/firestore';
 import { auth, db } from '../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/Modal';
 
 export default function DashboardStudent() {
