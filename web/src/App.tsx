@@ -23,6 +23,11 @@ export default function App() {
   const location = useLocation();
 
   useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       if (firebaseUser) {
@@ -54,7 +59,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full" style={{ minHeight: '100vh' }}>
+      <div className="flex items-center justify-center" style={{ minHeight: '100vh', width: '100%' }}>
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -63,7 +68,7 @@ export default function App() {
   const isAuthPage = location.pathname === '/login' || location.pathname === '/';
 
   return (
-    <div className={`app-container ${isAuthPage ? 'auth-layout' : ''}`}>
+    <div className={`app-container ${isAuthPage ? 'login-layout' : ''}`}>
       {!isAuthPage && user && (
         <Navbar
           userName={user.displayName || user.email || ''}
