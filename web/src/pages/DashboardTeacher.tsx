@@ -1,4 +1,3 @@
-```javascript
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
@@ -26,7 +25,7 @@ export default function DashboardTeacher() {
           ]);
           setStats({
             subjects: s.length,
-            assignments: 0, // Placeholder for global assignments count
+            assignments: 0, // Placeholder
             students: u.filter(user => user.role === 'STUDENT').length
           });
         }
@@ -123,120 +122,120 @@ export default function DashboardTeacher() {
       </div>
 
       <style>{`
-  .dashboard - container {
-  max - width: 1400px;
-  margin: 0 auto;
-}
+        .dashboard-container {
+          max-width: 1400px;
+          margin: 0 auto;
+        }
 
-        .dashboard - header {
-  margin - bottom: var(--spacing - xl);
-}
+        .dashboard-header {
+          margin-bottom: var(--spacing-xl);
+        }
 
-        .dashboard - header h1 {
-  font - size: var(--font - size - 4xl);
-  margin - bottom: var(--spacing - xs);
-}
+        .dashboard-header h1 {
+          font-size: var(--font-size-4xl);
+          margin-bottom: var(--spacing-xs);
+        }
 
-        .dashboard - subtitle {
-  font - size: var(--font - size - lg);
-  color: var(--text - secondary);
-}
+        .dashboard-subtitle {
+          font-size: var(--font-size-lg);
+          color: var(--text-secondary);
+        }
 
-        .stat - card.card - content {
-  text - align: center;
-  padding: var(--spacing - xl);
-}
+        .stat-card .card-content {
+          text-align: center;
+          padding: var(--spacing-xl);
+        }
 
-        .stat - icon {
-  font - size: 3rem;
-  margin - bottom: var(--spacing - md);
-}
+        .stat-icon {
+          font-size: 3rem;
+          margin-bottom: var(--spacing-md);
+        }
 
-        .stat - value {
-  font - size: var(--font - size - 4xl);
-  font - weight: var(--font - weight - bold);
-  color: var(--primary - 600);
-  margin - bottom: var(--spacing - xs);
-}
+        .stat-value {
+          font-size: var(--font-size-4xl);
+          font-weight: var(--font-weight-bold);
+          color: var(--primary-600);
+          margin-bottom: var(--spacing-xs);
+        }
 
-        .stat - label {
-  font - size: var(--font - size - sm);
-  color: var(--text - secondary);
-  text - transform: uppercase;
-  letter - spacing: 0.05em;
-}
+        .stat-label {
+          font-size: var(--font-size-sm);
+          color: var(--text-secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
 
-        .quick - actions {
-  display: flex;
-  flex - direction: column;
-  gap: var(--spacing - md);
-}
+        .quick-actions {
+          display: flex;
+          flex-direction: column;
+          gap: var(--spacing-md);
+        }
 
-        .action - button {
-  display: flex;
-  align - items: center;
-  gap: var(--spacing - md);
-  padding: var(--spacing - md);
-  background - color: var(--bg - tertiary);
-  border - radius: var(--radius - md);
-  transition: all var(--transition - fast);
-  text - decoration: none;
-  color: inherit;
-}
+        .action-button {
+          display: flex;
+          align-items: center;
+          gap: var(--spacing-md);
+          padding: var(--spacing-md);
+          background-color: var(--bg-tertiary);
+          border-radius: var(--radius-md);
+          transition: all var(--transition-fast);
+          text-decoration: none;
+          color: inherit;
+        }
 
-        .action - button:hover {
-  background - color: var(--primary - 50);
-  transform: translateX(4px);
-}
+        .action-button:hover {
+          background-color: var(--primary-50);
+          transform: translateX(4px);
+        }
 
-        .action - icon {
-  font - size: 2rem;
-}
+        .action-icon {
+          font-size: 2rem;
+        }
 
-        .action - title {
-  font - weight: var(--font - weight - semibold);
-  color: var(--text - primary);
-  margin - bottom: var(--spacing - xs);
-}
+        .action-title {
+          font-weight: var(--font-weight-semibold);
+          color: var(--text-primary);
+          margin-bottom: var(--spacing-xs);
+        }
 
-        .action - desc {
-  font - size: var(--font - size - sm);
-  color: var(--text - secondary);
-}
+        .action-desc {
+          font-size: var(--font-size-sm);
+          color: var(--text-secondary);
+        }
 
-        .activity - list {
-  display: flex;
-  flex - direction: column;
-  gap: var(--spacing - md);
-}
+        .activity-list {
+          display: flex;
+          flex-direction: column;
+          gap: var(--spacing-md);
+        }
 
-        .activity - item {
-  display: flex;
-  gap: var(--spacing - md);
-  padding: var(--spacing - md);
-  background - color: var(--bg - tertiary);
-  border - radius: var(--radius - md);
-}
+        .activity-item {
+          display: flex;
+          gap: var(--spacing-md);
+          padding: var(--spacing-md);
+          background-color: var(--bg-tertiary);
+          border-radius: var(--radius-md);
+        }
 
-        .activity - icon {
-  font - size: 1.5rem;
-}
+        .activity-icon {
+          font-size: 1.5rem;
+        }
 
-        .activity - content {
-  flex: 1;
-}
+        .activity-content {
+          flex: 1;
+        }
 
-        .activity - title {
-  font - weight: var(--font - weight - medium);
-  color: var(--text - primary);
-  margin - bottom: var(--spacing - xs);
-}
+        .activity-title {
+          font-weight: var(--font-weight-medium);
+          color: var(--text-primary);
+          margin-bottom: var(--spacing-xs);
+        }
 
-        .activity - time {
-  font - size: var(--font - size - sm);
-  color: var(--text - secondary);
-}
-`}</style>
+        .activity-time {
+          font-size: var(--font-size-sm);
+          color: var(--text-secondary);
+        }
+      `}</style>
     </div>
   );
 }
