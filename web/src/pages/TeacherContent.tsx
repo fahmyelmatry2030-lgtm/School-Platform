@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Subjects } from '../lib/firestore';
 import { Units, Lessons, Assets } from '../lib/content';
 import { uploadContent } from '../lib/storage';
@@ -9,12 +10,12 @@ import { db } from '../firebase';
 
 export default function TeacherContent() {
   const { t } = useTranslation();
+  const { subjectId, unitId, lessonId } = useParams<{ subjectId?: string; unitId?: string; lessonId?: string }>();
+  const navigate = useNavigate();
+
   const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
-  const [subjectId, setSubjectId] = useState('');
   const [units, setUnits] = useState<any[]>([]);
-  const [unitId, setUnitId] = useState('');
   const [lessons, setLessons] = useState<any[]>([]);
-  const [lessonId, setLessonId] = useState('');
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,12 +39,12 @@ export default function TeacherContent() {
         { id: 'hist-303', name: 'History' }
       ];
       setSubjects(demoSubjects);
-      if (!subjectId) setSubjectId(demoSubjects[0].id);
+      if (!subjectId) navigate(`/teacher/content/${demoSubjects[0].id}`, { replace: true });
       return;
     }
     const s = await Subjects.list();
     setSubjects(s);
-    if (!subjectId && s.length) setSubjectId(s[0].id);
+    if (!subjectId && s.length) navigate(`/teacher/content/${s[0].id}`, { replace: true });
   }
 
   async function loadUnits() {
@@ -59,7 +60,7 @@ export default function TeacherContent() {
     }
     const u = await Units.list(subjectId);
     setUnits(u);
-    if (!unitId && u.length) setUnitId(u[0].id);
+    if (u.length && !unitId) navigate(`/teacher/content/${subjectId}/${u[0].id}`, { replace: true });
   }
 
   async function loadLessons() {
@@ -75,7 +76,7 @@ export default function TeacherContent() {
     }
     const l = await Lessons.list(subjectId, unitId);
     setLessons(l);
-    if (!lessonId && l.length) setLessonId(l[0].id);
+    if (l.length && !lessonId) navigate(`/teacher/content/${subjectId}/${unitId}/${l[0].id}`, { replace: true });
   }
 
   async function loadAssets() {
@@ -103,9 +104,9 @@ export default function TeacherContent() {
     if (!confirm(t('confirmDelete'))) return;
     setLoading(true);
     try {
-      if (!isDemo) await Units.remove(subjectId, id);
+      if (!isDemo) await Units.remove(subjectId!, id);
       else setUnits(units.filter(u => u.id !== id));
-      if (unitId === id) setUnitId('');
+      if (unitId === id) navigate(`/teacher/content/${subjectId}`);
       await loadUnits();
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
   }
@@ -115,9 +116,9 @@ export default function TeacherContent() {
     if (!confirm(t('confirmDelete'))) return;
     setLoading(true);
     try {
-      if (!isDemo) await Lessons.remove(subjectId, unitId, id);
+      if (!isDemo) await Lessons.remove(subjectId!, unitId!, id);
       else setLessons(lessons.filter(l => l.id !== id));
-      if (lessonId === id) setLessonId('');
+      if (lessonId === id) navigate(`/teacher/content/${subjectId}/${unitId}`);
       await loadLessons();
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
   }
@@ -126,7 +127,7 @@ export default function TeacherContent() {
     if (!confirm(t('confirmDelete'))) return;
     setLoading(true);
     try {
-      if (!isDemo) await Assets.remove(subjectId, unitId, lessonId, id);
+      if (!isDemo) await Assets.remove(subjectId!, unitId!, lessonId!, id);
       else setAssets(assets.filter(a => a.id !== id));
       await loadAssets();
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
@@ -143,9 +144,9 @@ export default function TeacherContent() {
     setLoading(true);
     try {
       if (!isDemo) {
-        if (type === 'unit') await Units.update(subjectId, editingId, { title: editingTitle.trim() });
-        else if (type === 'lesson') await Lessons.update(subjectId, unitId, editingId, { title: editingTitle.trim() });
-        else if (type === 'asset') await Assets.update(subjectId, unitId, lessonId, editingId, { title: editingTitle.trim() });
+        if (type === 'unit') await Units.update(subjectId!, editingId, { title: editingTitle.trim() });
+        else if (type === 'lesson') await Lessons.update(subjectId!, unitId!, editingId, { title: editingTitle.trim() });
+        else if (type === 'asset') await Assets.update(subjectId!, unitId!, lessonId!, editingId, { title: editingTitle.trim() });
       } else {
         if (type === 'unit') setUnits(units.map(u => u.id === editingId ? { ...u, title: editingTitle.trim() } : u));
         else if (type === 'lesson') setLessons(lessons.map(l => l.id === editingId ? { ...l, title: editingTitle.trim() } : l));
@@ -233,8 +234,8 @@ export default function TeacherContent() {
         </CardHeader>
         <CardContent>
           <select
-            value={subjectId}
-            onChange={(e) => setSubjectId(e.target.value)}
+            value={subjectId || ''}
+            onChange={(e) => navigate(`/teacher/content/${e.target.value}`)}
             disabled={loading}
             className="select-full"
             title="Select Subject"
@@ -280,7 +281,7 @@ export default function TeacherContent() {
                     <div
                       key={u.id}
                       className={`list-item-clickable ${unitId === u.id ? 'active' : ''}`}
-                      onClick={() => setUnitId(u.id)}
+                      onClick={() => navigate(`/teacher/content/${subjectId}/${u.id}`)}
                     >
                       {editingId === u.id ? (
                         <div className="edit-form" onClick={e => e.stopPropagation()}>
@@ -346,7 +347,7 @@ export default function TeacherContent() {
                         <div
                           key={l.id}
                           className={`list-item-clickable ${lessonId === l.id ? 'active' : ''}`}
-                          onClick={() => setLessonId(l.id)}
+                          onClick={() => navigate(`/teacher/content/${subjectId}/${unitId}/${l.id}`)}
                         >
                           {editingId === l.id ? (
                             <div className="edit-form" onClick={e => e.stopPropagation()}>

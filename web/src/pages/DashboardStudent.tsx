@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
-import { db } from '../firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { Submissions, Assignments } from '../lib/assessments';
+import { Subjects } from '../lib/firestore';
+import { auth, db } from '../firebase';
+import { Modal } from '../components/Modal';
 
 export default function DashboardStudent() {
   const { t } = useTranslation();
@@ -11,6 +13,12 @@ export default function DashboardStudent() {
   const [stats, setStats] = useState({ courses: 0, assignments: 0, grades: '0%' });
   const [courses, setCourses] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
+
+  // Submission State
+  const [selectedAsgn, setSelectedAsgn] = useState<any | null>(null);
+  const [submissionText, setSubmissionText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
   const isDemo = !db;
 
   useEffect(() => {
@@ -26,14 +34,27 @@ export default function DashboardStudent() {
             { id: '3', name: 'English', teacher: 'Ms. Brown', icon: '📖' }
           ]);
           setAssignments([
-            { id: '1', title: 'Math Homework #5', status: 'Due Tomorrow', badge: 'badge-warning' },
-            { id: '2', title: 'Science Lab Report', status: 'Due in 3 days', badge: 'badge-primary' },
-            { id: '3', title: 'English Essay', status: 'Submitted', badge: 'badge-success' }
+            { id: '1', title: 'Math Homework #5', status: 'Due Tomorrow', badge: 'badge-warning', instructions: 'Complete exercises 1-10 on page 45.' },
+            { id: '2', title: 'Science Lab Report', status: 'Due in 3 days', badge: 'badge-primary', instructions: 'Write a summary of the photosynthesis experiment.' },
+            { id: '3', title: 'English Essay', status: 'Submitted', badge: 'badge-success', instructions: 'Write 500 words about your favorite book.' }
           ]);
         } else {
-          // Real Firebase Logic (Simplified for now)
-          // In a real app, you'd fetch based on studentId
-          setStats({ courses: 0, assignments: 0, grades: 'N/A' });
+          const s = await Subjects.list();
+          setCourses(s.map(item => ({ ...item, icon: '📚', teacher: 'TBD' })));
+
+          // For simplicity, we fetch assignments from all subjects (would be filtered by class in real app)
+          let allAsgns: any[] = [];
+          for (const subject of s) {
+            // This is a placeholder since Assignments.list currently needs lessonId
+            // In a full implementation, we'd query assignments by subject/class
+          }
+
+          setStats({
+            courses: s.length,
+            assignments: allAsgns.length,
+            grades: 'N/A'
+          });
+          setAssignments(allAsgns);
         }
       } catch (e) {
         console.error(e);
@@ -43,6 +64,38 @@ export default function DashboardStudent() {
     };
     fetchData();
   }, [isDemo]);
+
+  const handleOpenSubmit = (asgn: any) => {
+    if (asgn.status === 'Submitted') return;
+    setSelectedAsgn(asgn);
+    setSubmissionText('');
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedAsgn || !submissionText.trim()) return;
+    setSubmitting(true);
+    try {
+      if (!isDemo && auth.currentUser) {
+        await Submissions.submit(selectedAsgn.id, {
+          studentId: auth.currentUser.uid,
+          studentName: auth.currentUser.displayName || auth.currentUser.email || 'Student',
+          answers: { text: submissionText },
+        });
+      }
+
+      // Update local state
+      setAssignments(assignments.map((a: any) =>
+        a.id === selectedAsgn.id ? { ...a, status: 'Submitted', badge: 'badge-success' } : a
+      ));
+
+      setSelectedAsgn(null);
+      alert(t('submitSuccess'));
+    } catch (e: any) {
+      alert(t('error') + ': ' + e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) return <div className="loading-container"><LoadingSpinner size="lg" /></div>;
 
@@ -121,13 +174,14 @@ export default function DashboardStudent() {
                 <div className="empty-state">No pending assignments</div>
               ) : (
                 assignments.map((asgn: any) => (
-                  <div key={asgn.id} className="assignment-item">
+                  <div key={asgn.id} className={`assignment-item ${asgn.status === 'Submitted' ? 'submitted' : 'clickable'}`} onClick={() => handleOpenSubmit(asgn)}>
                     <div>
                       <div className="assignment-title">{asgn.title}</div>
                       <div className="assignment-meta">
                         <span className={`badge ${asgn.badge}`}>{asgn.status}</span>
                       </div>
                     </div>
+                    {asgn.status !== 'Submitted' && <button className="btn-primary btn-sm">{t('submit')}</button>}
                   </div>
                 ))
               )}
@@ -135,6 +189,39 @@ export default function DashboardStudent() {
           </CardContent>
         </Card>
       </div>
+
+      <Modal
+        isOpen={!!selectedAsgn}
+        onClose={() => setSelectedAsgn(null)}
+        title={selectedAsgn?.title || ''}
+      >
+        <div className="submission-modal">
+          <div className="instructions">
+            <strong>{t('instructions')}:</strong>
+            <p>{selectedAsgn?.instructions || t('noData')}</p>
+          </div>
+
+          <div className="form-group">
+            <label>{t('answer')}</label>
+            <textarea
+              value={submissionText}
+              onChange={(e) => setSubmissionText(e.target.value)}
+              placeholder="..."
+              rows={5}
+              disabled={submitting}
+            />
+          </div>
+
+          <div className="modal-actions">
+            <button className="btn-secondary" onClick={() => setSelectedAsgn(null)} disabled={submitting}>
+              {t('cancel')}
+            </button>
+            <button className="btn-primary" onClick={handleSubmit} disabled={submitting || !submissionText.trim()}>
+              {submitting ? <LoadingSpinner size="sm" /> : t('submitAssignment')}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <style>{`
         .dashboard-container {
@@ -225,8 +312,16 @@ export default function DashboardStudent() {
           border: 1px solid transparent;
         }
 
+        .assignment-item.clickable {
+          cursor: pointer;
+        }
+
+        .assignment-item.submitted {
+          cursor: default;
+        }
+
         .course-item:hover,
-        .assignment-item:hover {
+        .assignment-item.clickable:hover {
           background-color: var(--bg-secondary);
           transform: translateY(-2px);
           box-shadow: var(--shadow-md);
@@ -283,6 +378,40 @@ export default function DashboardStudent() {
           background: var(--bg-secondary);
           border-radius: var(--radius-md);
           border: 2px dashed var(--border-color);
+        }
+
+        .submission-modal {
+          display: flex;
+          flex-direction: column;
+          gap: var(--spacing-lg);
+        }
+
+        .instructions {
+          padding: var(--spacing-md);
+          background: var(--bg-tertiary);
+          border-radius: var(--radius-md);
+          border-right: 4px solid var(--primary-500);
+        }
+
+        [dir="ltr"] .instructions {
+          border-right: none;
+          border-left: 4px solid var(--primary-500);
+        }
+
+        .submission-modal textarea {
+          width: 100%;
+          padding: var(--spacing-md);
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius-md);
+          font-family: inherit;
+          resize: vertical;
+        }
+
+        .modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: var(--spacing-md);
+          margin-top: var(--spacing-md);
         }
       `}</style>
     </div>

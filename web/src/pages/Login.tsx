@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -106,6 +106,9 @@ export default function Login() {
         <Card className="login-card">
           <CardContent>
             <div className="login-header">
+              <Link to="/" className="back-link">
+                ← {t('backToHome') || 'العودة للرئيسية'}
+              </Link>
               <div className="login-icon">🎓</div>
               <h1 className="login-title">{t('schoolPlatform')}</h1>
               <p className="login-subtitle">{t('welcome')}</p>
@@ -179,23 +182,25 @@ export default function Login() {
               </button>
             </form>
 
-            <div className="login-footer">
-              <p className="demo-accounts-title">{t('demoAccounts') || 'Demo Accounts'}:</p>
+            <details className="login-footer-details">
+              <summary className="demo-accounts-summary">
+                {t('demoAccounts') || 'حسابات التجربة (Demo)'}
+              </summary>
               <div className="demo-accounts">
-                <div className="demo-account">
+                <div className="demo-account" onClick={() => { setEmail('admin@school.local'); setPassword('Admin123!'); }}>
                   <span className="badge badge-error">Admin</span>
                   <code>admin@school.local</code>
                 </div>
-                <div className="demo-account">
+                <div className="demo-account" onClick={() => { setEmail('teacher@school.local'); setPassword('Teacher123!'); }}>
                   <span className="badge badge-primary">Teacher</span>
                   <code>teacher@school.local</code>
                 </div>
-                <div className="demo-account">
+                <div className="demo-account" onClick={() => { setEmail('student@school.local'); setPassword('Student123!'); }}>
                   <span className="badge badge-success">Student</span>
                   <code>student@school.local</code>
                 </div>
               </div>
-            </div>
+            </details>
           </CardContent>
         </Card>
       </div>
@@ -336,24 +341,43 @@ export default function Login() {
           flex-direction: row-reverse;
         }
 
-        .login-footer {
+        .back-link {
+          display: block;
+          text-align: left;
+          font-size: var(--font-size-sm);
+          color: var(--primary-600);
+          text-decoration: none;
+          margin-bottom: var(--spacing-md);
+        }
+
+        [dir="rtl"] .back-link {
+          text-align: right;
+        }
+
+        .login-footer-details {
           margin-top: var(--spacing-xl);
           padding-top: var(--spacing-lg);
           border-top: 1px solid var(--divider-color);
         }
 
-        .demo-accounts-title {
+        .demo-accounts-summary {
+          cursor: pointer;
           font-size: var(--font-size-sm);
           font-weight: var(--font-weight-medium);
           color: var(--text-secondary);
-          margin-bottom: var(--spacing-md);
           text-align: center;
+          list-style: none;
+        }
+
+        .demo-accounts-summary:hover {
+          color: var(--primary-600);
         }
 
         .demo-accounts {
           display: flex;
           flex-direction: column;
           gap: var(--spacing-sm);
+          margin-top: var(--spacing-md);
         }
 
         .demo-account {
@@ -364,6 +388,12 @@ export default function Login() {
           background-color: var(--bg-tertiary);
           border-radius: var(--radius-md);
           font-size: var(--font-size-sm);
+          cursor: pointer;
+          transition: background-color var(--transition-fast);
+        }
+
+        .demo-account:hover {
+          background-color: var(--primary-50);
         }
 
         .demo-account code {

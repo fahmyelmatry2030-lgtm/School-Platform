@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth, db } from './firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import Home from './pages/Home';
 import Login from './pages/Login';
 import DashboardAdmin from './pages/DashboardAdmin';
 import DashboardTeacher from './pages/DashboardTeacher';
@@ -8,100 +12,83 @@ import TeacherContent from './pages/TeacherContent';
 import TeacherAssessments from './pages/TeacherAssessments';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
+import LoadingSpinner from './components/LoadingSpinner';
 
 type UserRole = 'ADMIN' | 'TEACHER' | 'STUDENT' | null;
 
-// نسخة تجريبية للمعاينة بدون Firebase
 export default function App() {
-  const [demoMode, setDemoMode] = useState<{ active: boolean; role: UserRole }>({
-    active: false,
-    role: null,
-  });
-
+  const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<UserRole>(null);
+  const [loading, setLoading] = useState(true);
   const location = useLocation();
 
-  if (!demoMode.active && location.pathname !== '/login') {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        // Try to get role from claims first, then firestore
+        const token = await firebaseUser.getIdTokenResult();
+        let userRole = token.claims.role as UserRole;
+
+        if (!userRole && db) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+            if (userDoc.exists()) {
+              userRole = userDoc.data().role as UserRole;
+            }
+          } catch (e) {
+            console.error('Error fetching role:', e);
+          }
+        }
+        setRole(userRole || 'STUDENT'); // Default to student
+      } else {
+        setUser(null);
+        setRole(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
     return (
-      <div className="demo-selection-container">
-        <div className="card demo-card">
-          <div className="card-content">
-            <h1 className="demo-title">
-              🎓 School Platform Demo
-            </h1>
-            <p className="demo-subtitle">
-              اختر دوراً لمعاينة الصفحات المختلفة
-            </p>
-
-            <div className="demo-buttons">
-              <button
-                className="btn-primary demo-btn"
-                onClick={() => setDemoMode({ active: true, role: 'ADMIN' })}
-              >
-                🔑 معاينة كمدير (Admin)
-              </button>
-
-              <button
-                className="btn-primary demo-btn"
-                onClick={() => setDemoMode({ active: true, role: 'TEACHER' })}
-              >
-                👨‍🏫 معاينة كمعلم (Teacher)
-              </button>
-
-              <button
-                className="btn-primary demo-btn"
-                onClick={() => setDemoMode({ active: true, role: 'STUDENT' })}
-              >
-                🎒 معاينة كطالب (Student)
-              </button>
-
-              <hr className="demo-divider" />
-
-              <Link to="/login" className="no-underline">
-                <button
-                  className="btn-outline w-full p-md"
-                >
-                  📱 عرض صفحة Login
-                </button>
-              </Link>
-            </div>
-
-            <div className="alert alert-info demo-note">
-              <strong>ملاحظة:</strong> هذا وضع معاينة فقط. لن تعمل وظائف Firebase (حفظ البيانات) حتى يتم إعداد Firebase.
-            </div>
-          </div>
-        </div>
+      <div className="flex items-center justify-center h-full" style={{ minHeight: '100vh' }}>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
-  // عرض التطبيق مع الدور المختار
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/';
+
   return (
-    <div className={`app-container ${location.pathname === '/login' ? 'login-layout' : ''}`}>
-      {location.pathname !== '/login' && (
+    <div className={`app-container ${isAuthPage ? 'auth-layout' : ''}`}>
+      {!isAuthPage && user && (
         <Navbar
-          userName="demo@school.local"
-          userRole={demoMode.role || undefined}
+          userName={user.displayName || user.email || ''}
+          userRole={role || undefined}
         />
       )}
 
       <div className="app-body">
-        {demoMode.role && location.pathname !== '/login' && <Sidebar userRole={demoMode.role} />}
+        {!isAuthPage && role && <Sidebar userRole={role} />}
 
         <main className="app-main">
           <Routes>
-            <Route path="/" element={<Navigate to={`/${demoMode.role?.toLowerCase() || 'login'}`} replace />} />
-            <Route path="/login" element={<Login />} />
+            <Route path="/" element={user ? <Navigate to={`/${role?.toLowerCase()}`} replace /> : <Home />} />
+            <Route path="/login" element={user ? <Navigate to={`/${role?.toLowerCase()}`} replace /> : <Login />} />
 
             {/* Admin Routes */}
-            <Route path="/admin" element={<DashboardAdmin />} />
+            <Route path="/admin" element={role === 'ADMIN' ? <DashboardAdmin /> : <Navigate to="/" replace />} />
 
             {/* Teacher Routes */}
-            <Route path="/teacher" element={<DashboardTeacher />} />
-            <Route path="/teacher/content" element={<TeacherContent />} />
-            <Route path="/teacher/assessments" element={<TeacherAssessments />} />
+            <Route path="/teacher" element={role === 'TEACHER' ? <DashboardTeacher /> : <Navigate to="/" replace />} />
+            <Route path="/teacher/content/:subjectId?/:unitId?/:lessonId?" element={role === 'TEACHER' ? <TeacherContent /> : <Navigate to="/" replace />} />
+            <Route path="/teacher/assessments/:subjectId?/:unitId?/:lessonId?" element={role === 'TEACHER' ? <TeacherAssessments /> : <Navigate to="/" replace />} />
 
             {/* Student Routes */}
-            <Route path="/student" element={<DashboardStudent />} />
+            <Route path="/student" element={role === 'STUDENT' ? <DashboardStudent /> : <Navigate to="/" replace />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

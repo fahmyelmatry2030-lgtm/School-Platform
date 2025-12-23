@@ -48,3 +48,10 @@ export const Classes = {
     updateDocById('classes', id, data),
   remove: (id: string) => deleteDocById('classes', id),
 };
+
+export const Users = {
+  list: () => listCollection<{ id: string; email: string; role: 'ADMIN' | 'TEACHER' | 'STUDENT'; firstName: string; lastName: string; active: boolean }>('users'),
+  update: (id: string, data: Partial<{ role: string; firstName: string; lastName: string; active: boolean }>) =>
+    updateDocById('users', id, data),
+  remove: (id: string) => deleteDocById('users', id),
+};

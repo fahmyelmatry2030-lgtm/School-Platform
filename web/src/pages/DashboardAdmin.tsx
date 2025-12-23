@@ -1,22 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { Grades, Subjects, Classes } from '../lib/firestore';
+import { Grades, Subjects, Classes, Users } from '../lib/firestore';
 import { seedBasics } from '../lib/seed';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
-import Modal from '../components/Modal';
+import { Modal } from '../components/Modal';
+import { db } from '../firebase';
 
 type Grade = { id: string; name: string };
 type Subject = { id: string; name: string; code?: string };
 type ClassItem = { id: string; name: string; gradeId: string; homeroomTeacherId?: string | null };
+type UserAccount = { id: string; email: string; role: 'ADMIN' | 'TEACHER' | 'STUDENT'; firstName: string; lastName: string; active: boolean };
 
 export default function DashboardAdmin() {
   const { t } = useTranslation();
   const [grades, setGrades] = useState<Grade[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [users, setUsers] = useState<UserAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editUser, setEditUser] = useState<UserAccount | null>(null);
+  const isDemo = !db;
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; type: string; id: string; name: string }>({
     open: false,
     type: '',
@@ -35,14 +40,36 @@ export default function DashboardAdmin() {
     setLoading(true);
     setError(null);
     try {
-      const [g, s, c] = await Promise.all([
+      if (isDemo) {
+        setGrades([
+          { id: 'g1', name: 'Grade 7' },
+          { id: 'g2', name: 'Grade 8' }
+        ]);
+        setSubjects([
+          { id: 's1', name: 'Mathematics', code: 'MATH' },
+          { id: 's2', name: 'Science', code: 'SCI' }
+        ]);
+        setClasses([
+          { id: 'c1', name: '7-A', gradeId: 'g1' },
+          { id: 'c2', name: '8-B', gradeId: 'g2' }
+        ]);
+        setUsers([
+          { id: 'u1', email: 'admin@school.local', role: 'ADMIN', firstName: 'School', lastName: 'Admin', active: true },
+          { id: 'u2', email: 'teacher@school.local', role: 'TEACHER', firstName: 'Best', lastName: 'Teacher', active: true },
+          { id: 'u3', email: 'student@school.local', role: 'STUDENT', firstName: 'Star', lastName: 'Student', active: true }
+        ]);
+        return;
+      }
+      const [g, s, c, u] = await Promise.all([
         Grades.list(),
         Subjects.list(),
         Classes.list(),
+        Users.list()
       ]);
       setGrades(g);
       setSubjects(s);
       setClasses(c);
+      setUsers(u);
       if (!classGradeId && g.length) setClassGradeId(g[0].id);
     } catch (e: any) {
       setError(e.message ?? 'Failed to load');
@@ -103,11 +130,38 @@ export default function DashboardAdmin() {
     const { type, id } = deleteModal;
     setLoading(true);
     try {
-      if (type === 'grade') await Grades.remove(id);
-      else if (type === 'subject') await Subjects.remove(id);
-      else if (type === 'class') await Classes.remove(id);
+      if (!isDemo) {
+        if (type === 'grade') await Grades.remove(id);
+        else if (type === 'subject') await Subjects.remove(id);
+        else if (type === 'class') await Classes.remove(id);
+        else if (type === 'user') await Users.remove(id);
+      } else {
+        if (type === 'grade') setGrades(grades.filter(g => g.id !== id));
+        else if (type === 'subject') setSubjects(subjects.filter(s => s.id !== id));
+        else if (type === 'class') setClasses(classes.filter(c => c.id !== id));
+        else if (type === 'user') setUsers(users.filter(u => u.id !== id));
+      }
       await refreshAll();
       setDeleteModal({ open: false, type: '', id: '', name: '' });
+    } finally { setLoading(false); }
+  }
+
+  async function handleUpdateUser() {
+    if (!editUser) return;
+    setLoading(true);
+    try {
+      if (!isDemo) {
+        await Users.update(editUser.id, {
+          role: editUser.role,
+          active: editUser.active,
+          firstName: editUser.firstName,
+          lastName: editUser.lastName
+        });
+      } else {
+        setUsers(users.map(u => u.id === editUser.id ? editUser : u));
+      }
+      setEditUser(null);
+      await refreshAll();
     } finally { setLoading(false); }
   }
 
@@ -152,6 +206,14 @@ export default function DashboardAdmin() {
             <div className="stat-label">{t('classes')}</div>
           </CardContent>
         </Card>
+
+        <Card className="stat-card">
+          <CardContent>
+            <div className="stat-icon">👥</div>
+            <div className="stat-value">{users.length}</div>
+            <div className="stat-label">{t('users')}</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Management Sections */}
@@ -163,7 +225,7 @@ export default function DashboardAdmin() {
           </CardHeader>
           <CardContent>
             <div className="form-group">
-              <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+              <div className="input-with-button">
                 <input
                   placeholder={t('gradeName')}
                   value={gradeName}
@@ -204,7 +266,7 @@ export default function DashboardAdmin() {
           </CardHeader>
           <CardContent>
             <div className="form-group">
-              <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+              <div className="input-with-button">
                 <input
                   placeholder={t('subjectName')}
                   value={subjectName}
@@ -216,7 +278,7 @@ export default function DashboardAdmin() {
                   value={subjectCode}
                   onChange={(e) => setSubjectCode(e.target.value)}
                   disabled={loading}
-                  style={{ maxWidth: '150px' }}
+                  className="input-code"
                 />
                 <button onClick={addSubject} disabled={loading || !subjectName.trim()} className="btn-primary">
                   {t('add')}
@@ -254,14 +316,15 @@ export default function DashboardAdmin() {
           </CardHeader>
           <CardContent>
             <div className="form-group">
-              <div style={{ display: 'flex', gap: 'var(--spacing-sm)', alignItems: 'center' }}>
+              <div className="input-with-button-centered">
                 <input
                   placeholder={t('className')}
                   value={className}
                   onChange={(e) => setClassName(e.target.value)}
                   disabled={loading}
+                  title={t('className')}
                 />
-                <select value={classGradeId} onChange={(e) => setClassGradeId(e.target.value)} disabled={loading}>
+                <select value={classGradeId} onChange={(e) => setClassGradeId(e.target.value)} disabled={loading} title={t('grades')}>
                   {grades.map((g) => (
                     <option key={g.id} value={g.id}>{g.name}</option>
                   ))}
@@ -294,6 +357,45 @@ export default function DashboardAdmin() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Users */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('users')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="items-list">
+              {users.length === 0 ? (
+                <div className="empty-state">{t('noUsers')}</div>
+              ) : (
+                users.map((u) => (
+                  <div key={u.id} className="list-item">
+                    <div className="item-info">
+                      <span className="item-name">{u.firstName} {u.lastName}</span>
+                      <div className="item-meta">
+                        <code>{u.email}</code>
+                        <span className={`badge badge-${u.role.toLowerCase()}`}>{u.role}</span>
+                        <span className={`badge ${u.active ? 'badge-success' : 'badge-error'}`}>
+                          {u.active ? t('active') : t('inactive')}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="item-actions">
+                      <button onClick={() => setEditUser(u)} className="btn-secondary btn-sm">{t('edit')}</button>
+                      <button
+                        onClick={() => setDeleteModal({ open: true, type: 'user', id: u.id, name: u.email })}
+                        disabled={loading}
+                        className="btn-danger btn-sm"
+                      >
+                        {t('delete')}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -303,7 +405,7 @@ export default function DashboardAdmin() {
         title={t('confirmDelete')}
       >
         <p>Are you sure you want to delete <strong>{deleteModal.name}</strong>?</p>
-        <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-lg)' }}>
+        <div className="modal-actions">
           <button onClick={handleDelete} disabled={loading} className="btn-danger w-full">
             {loading ? <LoadingSpinner size="sm" /> : t('delete')}
           </button>
@@ -315,6 +417,83 @@ export default function DashboardAdmin() {
             {t('cancel')}
           </button>
         </div>
+      </Modal>
+
+      {/* Edit User Modal */}
+      <Modal
+        isOpen={!!editUser}
+        onClose={() => setEditUser(null)}
+        title={t('edit')}
+      >
+        {editUser && (
+          <div className="user-edit-form">
+            <div className="form-group">
+              <label>{t('firstName')}</label>
+              <input
+                value={editUser.firstName}
+                onChange={(e) => setEditUser({ ...editUser, firstName: e.target.value })}
+                disabled={loading}
+                title={t('firstName')}
+              />
+            </div>
+            <div className="form-group">
+              <label>{t('lastName')}</label>
+              <input
+                value={editUser.lastName}
+                onChange={(e) => setEditUser({ ...editUser, lastName: e.target.value })}
+                disabled={loading}
+                title={t('lastName')}
+              />
+            </div>
+            <div className="form-group">
+              <label>{t('role')}</label>
+              <select
+                value={editUser.role}
+                onChange={(e) => setEditUser({ ...editUser, role: e.target.value as any })}
+                disabled={loading}
+                title={t('role')}
+              >
+                <option value="ADMIN">ADMIN</option>
+                <option value="TEACHER">TEACHER</option>
+                <option value="STUDENT">STUDENT</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Status</label>
+              <div className="status-radio-group">
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    checked={editUser.active}
+                    onChange={() => setEditUser({ ...editUser, active: true })}
+                    disabled={loading}
+                    title={t('active')}
+                  />
+                  {t('active')}
+                </label>
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    checked={!editUser.active}
+                    onChange={() => setEditUser({ ...editUser, active: false })}
+                    disabled={loading}
+                    title={t('inactive')}
+                  />
+                  {t('inactive')}
+                </label>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button onClick={handleUpdateUser} disabled={loading} className="btn-primary w-full">
+                {loading ? <LoadingSpinner size="sm" /> : t('save')}
+              </button>
+              <button onClick={() => setEditUser(null)} disabled={loading} className="btn-secondary w-full">
+                {t('cancel')}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       <style>{`
@@ -396,6 +575,49 @@ export default function DashboardAdmin() {
           font-size: var(--font-size-sm);
           color: var(--text-secondary);
           font-weight: var(--font-weight-normal);
+          display: flex;
+          gap: var(--spacing-sm);
+          align-items: center;
+          margin-top: var(--spacing-xs);
+        }
+
+        .user-edit-form {
+          display: flex;
+          flex-direction: column;
+          gap: var(--spacing-md);
+        }
+
+        .status-radio-group {
+          display: flex;
+          gap: var(--spacing-md);
+        }
+
+        .radio-label {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          cursor: pointer;
+        }
+
+        .modal-actions {
+          display: flex;
+          gap: var(--spacing-md);
+          margin-top: var(--spacing-lg);
+        }
+
+        .input-with-button {
+          display: flex;
+          gap: var(--spacing-sm);
+        }
+
+        .input-with-button-centered {
+          display: flex;
+          gap: var(--spacing-sm);
+          align-items: center;
+        }
+
+        .input-code {
+          max-width: 150px;
         }
 
         .empty-state {
@@ -417,6 +639,6 @@ export default function DashboardAdmin() {
           }
         }
       `}</style>
-    </div>
+    </div >
   );
 }

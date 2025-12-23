@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Subjects } from '../lib/firestore';
 import { Units, Lessons } from '../lib/content';
-import { Assignments, Questions } from '../lib/assessments';
+import { Assignments, Questions, Submissions } from '../lib/assessments';
+import { Modal } from '../components/Modal';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -10,21 +12,25 @@ import { updateDoc, doc } from 'firebase/firestore';
 
 export default function TeacherAssessments() {
   const { t } = useTranslation();
+  const { subjectId, unitId, lessonId } = useParams<{ subjectId?: string; unitId?: string; lessonId?: string }>();
+  const navigate = useNavigate();
+
   const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
-  const [subjectId, setSubjectId] = useState('');
   const [units, setUnits] = useState<any[]>([]);
-  const [unitId, setUnitId] = useState('');
   const [lessons, setLessons] = useState<any[]>([]);
-  const [lessonId, setLessonId] = useState('');
 
   const [assignments, setAssignments] = useState<any[]>([]);
   const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [selectedSub, setSelectedSub] = useState<any | null>(null);
+  const [gradingScore, setGradingScore] = useState<number | string>('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [showSubmissions, setShowSubmissions] = useState(false);
   const isDemo = !db;
 
   // forms
@@ -38,16 +44,17 @@ export default function TeacherAssessments() {
 
   async function loadSubjects() {
     if (isDemo) {
-      setSubjects([
+      const demoSubjects = [
         { id: 'math-101', name: 'Mathematics' },
         { id: 'sci-202', name: 'Science' }
-      ]);
-      if (!subjectId) setSubjectId('math-101');
+      ];
+      setSubjects(demoSubjects);
+      if (!subjectId) navigate(`/teacher/assessments/${demoSubjects[0].id}`, { replace: true });
       return;
     }
     const s = await Subjects.list();
     setSubjects(s);
-    if (!subjectId && s.length) setSubjectId(s[0].id);
+    if (!subjectId && s.length) navigate(`/teacher/assessments/${s[0].id}`, { replace: true });
   }
 
   async function loadUnits() {
@@ -63,7 +70,7 @@ export default function TeacherAssessments() {
     }
     const u = await Units.list(subjectId);
     setUnits(u);
-    if (!unitId && u.length) setUnitId(u[0].id);
+    if (u.length && !unitId) navigate(`/teacher/assessments/${subjectId}/${u[0].id}`, { replace: true });
   }
 
   async function loadLessons() {
@@ -79,7 +86,7 @@ export default function TeacherAssessments() {
     }
     const l = await Lessons.list(subjectId, unitId);
     setLessons(l);
-    if (!lessonId && l.length) setLessonId(l[0].id);
+    if (l.length && !lessonId) navigate(`/teacher/assessments/${subjectId}/${unitId}/${l[0].id}`, { replace: true });
   }
 
   async function loadAssignments() {
@@ -112,6 +119,18 @@ export default function TeacherAssessments() {
     setQuestions(q);
   }
 
+  async function loadSubmissions(assignmentId: string) {
+    if (isDemo) {
+      setSubmissions([
+        { id: 's1', studentName: 'Ahmed Ali', studentEmail: 'ahmed@school.local', submittedAt: new Date().toISOString(), status: 'SUBMITTED', answers: { text: 'The answer is 5.' } },
+        { id: 's2', studentName: 'Sara Khan', studentEmail: 'sara@school.local', submittedAt: new Date().toISOString(), status: 'GRADED', score: 90 }
+      ]);
+      return;
+    }
+    const s = await Submissions.listByAssignment(assignmentId);
+    setSubmissions(s);
+  }
+
   useEffect(() => { loadSubjects(); }, []);
   useEffect(() => { loadUnits(); }, [subjectId]);
   useEffect(() => { loadLessons(); }, [unitId]);
@@ -122,7 +141,7 @@ export default function TeacherAssessments() {
     if (!confirm(t('confirmDelete'))) return;
     setLoading(true);
     try {
-      if (!isDemo) await Assignments.remove(lessonId, id);
+      if (!isDemo) await Assignments.remove(lessonId!, id);
       else setAssignments(assignments.filter(a => a.id !== id));
       if (selectedAssignment === id) {
         setSelectedAssignment(null);
@@ -136,7 +155,7 @@ export default function TeacherAssessments() {
     if (!confirm(t('confirmDelete'))) return;
     setLoading(true);
     try {
-      if (!isDemo) await Questions.remove(lessonId, selectedAssignment!, id);
+      if (!isDemo) await Questions.remove(lessonId!, selectedAssignment!, id);
       else setQuestions(questions.filter(q => q.id !== id));
       await loadQuestions(selectedAssignment!);
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
@@ -206,6 +225,35 @@ export default function TeacherAssessments() {
     } catch (e: any) { setError(e.message); } finally { setLoading(false); }
   }
 
+  async function handleGrade() {
+    if (!selectedSub || gradingScore === '') return;
+    setLoading(true);
+    try {
+      if (!isDemo) {
+        await Submissions.grade(selectedSub.id, { score: Number(gradingScore) });
+      }
+
+      setSubmissions(submissions.map((s: any) =>
+        s.id === selectedSub.id ? { ...s, status: 'GRADED', score: Number(gradingScore) } : s
+      ));
+
+      setSelectedSub(null);
+      setGradingScore('');
+      alert(t('updateSuccess'));
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const openSubmissions = (asgnId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedAssignment(asgnId);
+    setShowSubmissions(true);
+    loadSubmissions(asgnId);
+  };
+
   return (
     <div className="assessments-page">
       <div className="page-header">
@@ -223,8 +271,8 @@ export default function TeacherAssessments() {
           </CardHeader>
           <CardContent>
             <select
-              value={subjectId}
-              onChange={(e) => setSubjectId(e.target.value)}
+              value={subjectId || ''}
+              onChange={(e) => navigate(`/teacher/assessments/${e.target.value}`)}
               className="select-full"
               title="Select Subject"
             >
@@ -247,8 +295,8 @@ export default function TeacherAssessments() {
           </CardHeader>
           <CardContent>
             <select
-              value={unitId}
-              onChange={(e) => setUnitId(e.target.value)}
+              value={unitId || ''}
+              onChange={(e) => navigate(`/teacher/assessments/${subjectId}/${e.target.value}`)}
               disabled={!subjectId}
               className="select-full"
               title="Select Unit"
@@ -267,8 +315,8 @@ export default function TeacherAssessments() {
           </CardHeader>
           <CardContent>
             <select
-              value={lessonId}
-              onChange={(e) => setLessonId(e.target.value)}
+              value={lessonId || ''}
+              onChange={(e) => navigate(`/teacher/assessments/${subjectId}/${unitId}/${e.target.value}`)}
               disabled={!unitId}
               className="select-full"
               title="Select Lesson"
@@ -353,6 +401,7 @@ export default function TeacherAssessments() {
                             </span>
                           </div>
                           <div className="item-actions">
+                            <button className="btn-icon" onClick={(e) => openSubmissions(a.id, e)} title={t('submissions')}>📋</button>
                             <button className="btn-icon" onClick={(e) => startEditing(a.id, a.title, e)} title={t('edit')}>✏️</button>
                             <button
                               className="btn-icon btn-danger-soft"
@@ -444,6 +493,78 @@ export default function TeacherAssessments() {
           </Card>
         </div>
       )}
+
+      {/* Submissions Modal */}
+      <Modal
+        isOpen={showSubmissions}
+        onClose={() => setShowSubmissions(false)}
+        title={t('submissions')}
+        size="lg"
+      >
+        <div className="submissions-container">
+          {submissions.length === 0 ? (
+            <div className="empty-state">{t('noSubmissions')}</div>
+          ) : (
+            <div className="subs-list">
+              {submissions.map((s) => (
+                <div key={s.id} className="sub-item">
+                  <div className="sub-info">
+                    <div className="sub-student">{s.studentName}</div>
+                    <div className="sub-email">{s.studentEmail}</div>
+                    <div className="sub-date">{new Date(s.submittedAt?.seconds * 1000 || s.submittedAt).toLocaleString()}</div>
+                  </div>
+                  <div className="sub-status">
+                    <span className={`badge ${s.status === 'GRADED' ? 'badge-success' : 'badge-warning'}`}>
+                      {s.status} {s.status === 'GRADED' ? `(${s.score})` : ''}
+                    </span>
+                  </div>
+                  <div className="sub-actions">
+                    <button className="btn-outline btn-sm" onClick={() => setSelectedSub(s)}>
+                      {t('viewDetails')}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Grading Modal */}
+      <Modal
+        isOpen={!!selectedSub}
+        onClose={() => setSelectedSub(null)}
+        title={t('grade')}
+      >
+        <div className="grading-form">
+          <div className="student-answer">
+            <strong>{t('answer')}:</strong>
+            <pre className="answer-box">
+              {selectedSub?.answers?.text || JSON.stringify(selectedSub?.answers, null, 2)}
+            </pre>
+          </div>
+
+          <div className="form-group">
+            <label>{t('score')}</label>
+            <input
+              type="number"
+              value={gradingScore}
+              onChange={(e) => setGradingScore(e.target.value)}
+              placeholder="0-100"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="modal-actions">
+            <button className="btn-secondary" onClick={() => setSelectedSub(null)} disabled={loading}>
+              {t('cancel')}
+            </button>
+            <button className="btn-primary" onClick={handleGrade} disabled={loading || gradingScore === ''}>
+              {loading ? <LoadingSpinner size="sm" /> : t('save')}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <style>{`
         .assessments-page {
@@ -644,6 +765,57 @@ export default function TeacherAssessments() {
           padding: var(--spacing-xs) var(--spacing-sm);
           border: 1px solid var(--primary-300);
           border-radius: var(--radius-sm);
+        }
+
+        .submissions-container {
+          max-height: 60vh;
+          overflow-y: auto;
+        }
+
+        .sub-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: var(--spacing-md);
+          background: var(--bg-tertiary);
+          border-radius: var(--radius-md);
+          margin-bottom: var(--spacing-sm);
+        }
+
+        .sub-student {
+          font-weight: var(--font-weight-bold);
+        }
+
+        .sub-email {
+          font-size: var(--font-size-sm);
+          color: var(--text-secondary);
+        }
+
+        .sub-date {
+          font-size: var(--font-size-xs);
+          color: var(--text-secondary);
+        }
+
+        .grading-form {
+          display: flex;
+          flex-direction: column;
+          gap: var(--spacing-md);
+        }
+
+        .answer-box {
+          padding: var(--spacing-md);
+          background: var(--bg-secondary);
+          border-radius: var(--radius-sm);
+          white-space: pre-wrap;
+          font-family: inherit;
+          margin-top: var(--spacing-xs);
+        }
+
+        .modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: var(--spacing-md);
+          margin-top: var(--spacing-lg);
         }
       `}</style>
     </div>

@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export const Assignments = {
@@ -7,7 +7,7 @@ export const Assignments = {
     const snap = await getDocs(q);
     return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
   },
-  async create(lessonId: string, data: { title: string; instructions?: string; dueAt?: string | null; kind?: 'ASSIGNMENT'|'QUIZ'; settings?: any }) {
+  async create(lessonId: string, data: { title: string; instructions?: string; dueAt?: string | null; kind?: 'ASSIGNMENT' | 'QUIZ'; settings?: any }) {
     const ref = await addDoc(collection(db, `lessons/${lessonId}/assignments`), {
       ...data,
       kind: data.kind ?? 'ASSIGNMENT',
@@ -26,7 +26,7 @@ export const Questions = {
     const snap = await getDocs(q);
     return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
   },
-  async add(lessonId: string, assignmentId: string, data: { type: 'MCQ'|'SHORT'|'TRUE_FALSE'; prompt: string; options?: any; answerKey?: any; points?: number; language?: string }) {
+  async add(lessonId: string, assignmentId: string, data: { type: 'MCQ' | 'SHORT' | 'TRUE_FALSE'; prompt: string; options?: any; answerKey?: any; points?: number; language?: string }) {
     const ref = await addDoc(collection(db, `lessons/${lessonId}/assignments/${assignmentId}/questions`), {
       ...data,
       language: data.language ?? 'en',
@@ -46,8 +46,17 @@ export const Submissions = {
     return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
   },
   async listMy(studentId: string) {
-    // Collection group search could be added later; simplified query per assignment elsewhere
-    return [] as any[];
+    const q = query(collection(db, 'submissions'), where('studentId', '==', studentId));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+  },
+  async submit(assignmentId: string, data: { studentId: string; studentName: string; answers: any; fileUrl?: string }) {
+    const ref = await addDoc(collection(db, `assignments/${assignmentId}/submissions`), {
+      ...data,
+      submittedAt: serverTimestamp(),
+      status: 'SUBMITTED',
+    } as any);
+    return { id: ref.id };
   },
   async grade(submissionId: string, data: { score: number; rubric?: any }) {
     await updateDoc(doc(db, `submissions/${submissionId}/gradeItem`), {
