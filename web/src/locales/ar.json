@@ -146,8 +146,16 @@
     "reports": "التقارير",
     "viewPerformance": "عرض أداء الطلاب",
     "newSubmissionFrom": "تسليم جديد من {{name}}",
-    "grading": "التصحيح",
+    "gradingSystem": "نظام التصحيح",
     "gradeSubmission": "تصحيح التسليم",
-    "pointsObtained": "النقاط المحصلة",
+    "pointsObtained": "النقاط المحتسبة",
+    "accessCodes": "أكواد التفعيل",
+    "generateCodes": "توليد أكواد",
+    "redeemCode": "تفعيل كود",
+    "enterCode": "أدخل الكود هنا",
+    "codeRedeemedSuccess": "تم تفعيل الكود بنجاح! تم فتح المادة.",
+    "invalidCode": "كود غير صالح أو مستخدم مسبقاً",
+    "generate": "توليد",
+    "count": "العدد",
     "feedback": "ملاحظات المعلم"
 }

@@ -128,8 +128,16 @@
     "reports": "Reports",
     "viewPerformance": "View student performance",
     "newSubmissionFrom": "New submission from {{name}}",
-    "grading": "Grading",
+    "gradingSystem": "Grading System",
     "gradeSubmission": "Grade Submission",
     "pointsObtained": "Points Obtained",
+    "accessCodes": "Access Codes",
+    "generateCodes": "Generate Codes",
+    "redeemCode": "Redeem Code",
+    "enterCode": "Enter code here",
+    "codeRedeemedSuccess": "Code redeemed successfully! Subject unlocked.",
+    "invalidCode": "Invalid or already used code",
+    "generate": "Generate",
+    "count": "Count",
     "feedback": "Teacher Feedback"
 }

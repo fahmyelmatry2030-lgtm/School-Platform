@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { RedeemCodeModal } from '../components/RedeemCodeModal';
 import { Submissions, Assignments } from '../lib/assessments';
 import { Subjects } from '../lib/firestore';
 import { auth, db } from '../firebase';
@@ -13,6 +14,8 @@ export default function DashboardStudent() {
   const [stats, setStats] = useState({ courses: 0, assignments: 0, grades: '0%' });
   const [courses, setCourses] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null); // Added user state
+  const [showRedeem, setShowRedeem] = useState(false); // Added showRedeem state
 
   // Submission State
   const [selectedAsgn, setSelectedAsgn] = useState<any | null>(null);
@@ -21,56 +24,61 @@ export default function DashboardStudent() {
 
   const isDemo = !db;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        if (isDemo) {
-          // Mock Data
-          setStats({ courses: 3, assignments: 5, grades: '88%' });
-          setCourses([
-            { id: '1', name: 'Mathematics', teacher: 'Dr. Smith', icon: '📐' },
-            { id: '2', name: 'Science', teacher: 'Prof. Johnson', icon: '🔬' },
-            { id: '3', name: 'English', teacher: 'Ms. Brown', icon: '📖' }
-          ]);
-          setAssignments([
-            { id: '1', title: 'Math Homework #5', status: 'Due Tomorrow', badge: 'badge-warning', instructions: 'Complete exercises 1-10 on page 45.' },
-            { id: '2', title: 'Science Lab Report', status: 'Due in 3 days', badge: 'badge-primary', instructions: 'Write a summary of the photosynthesis experiment.' },
-            { id: '3', title: 'English Essay', status: 'Submitted', badge: 'badge-success', instructions: 'Write 500 words about your favorite book.' }
-          ]);
-        } else {
-          const s = await Subjects.list();
-          setCourses(s.map(item => ({ ...item, icon: '📚', teacher: '—' })));
-
-          let mySubmissions: any[] = [];
-          if (auth.currentUser) {
-            mySubmissions = await Submissions.listMy(auth.currentUser.uid);
-          }
-
-          setStats({
-            courses: s.length,
-            assignments: mySubmissions.length,
-            grades: mySubmissions.length > 0 ? `${Math.round(mySubmissions.length * 10)}%` : '0%'
-          });
-
-          // In a real app, assignments are lesson-dependent. 
-          // For now, we show the submissions as "Recent Activity"
-          setAssignments(mySubmissions.map(sub => ({
-            id: sub.id,
-            title: sub.id, // Placeholder for assignment name if stored in sub
-            status: 'Submitted',
-            badge: 'badge-success',
-            instructions: t('noData')
-          })));
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+  const fetchData = useCallback(async () => { // Wrapped fetchData in useCallback
+    setLoading(true);
+    try {
+      if (auth.currentUser) { // Set user from auth.currentUser
+        setUser(auth.currentUser);
       }
-    };
+
+      if (isDemo) {
+        // Mock Data
+        setStats({ courses: 3, assignments: 5, grades: '88%' });
+        setCourses([
+          { id: '1', name: 'Mathematics', teacher: 'Dr. Smith', icon: '📐' },
+          { id: '2', name: 'Science', teacher: 'Prof. Johnson', icon: '🔬' },
+          { id: '3', name: 'English', teacher: 'Ms. Brown', icon: '📖' }
+        ]);
+        setAssignments([
+          { id: '1', title: 'Math Homework #5', status: 'Due Tomorrow', badge: 'badge-warning', instructions: 'Complete exercises 1-10 on page 45.' },
+          { id: '2', title: 'Science Lab Report', status: 'Due in 3 days', badge: 'badge-primary', instructions: 'Write a summary of the photosynthesis experiment.' },
+          { id: '3', title: 'English Essay', status: 'Submitted', badge: 'badge-success', instructions: 'Write 500 words about your favorite book.' }
+        ]);
+      } else {
+        const s = await Subjects.list();
+        setCourses(s.map(item => ({ ...item, icon: '📚', teacher: '—' })));
+
+        let mySubmissions: any[] = [];
+        if (auth.currentUser) {
+          mySubmissions = await Submissions.listMy(auth.currentUser.uid);
+        }
+
+        setStats({
+          courses: s.length,
+          assignments: mySubmissions.length,
+          grades: mySubmissions.length > 0 ? `${Math.round(mySubmissions.length * 10)}%` : '0%'
+        });
+
+        // In a real app, assignments are lesson-dependent. 
+        // For now, we show the submissions as "Recent Activity"
+        setAssignments(mySubmissions.map(sub => ({
+          id: sub.id,
+          title: sub.id, // Placeholder for assignment name if stored in sub
+          status: 'Submitted',
+          badge: 'badge-success',
+          instructions: t('noData')
+        })));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [isDemo, t]); // Dependencies for useCallback
+
+  useEffect(() => {
     fetchData();
-  }, [isDemo, t]);
+  }, [fetchData]); // Call fetchData when it changes (which is only on mount due to empty deps in useCallback)
 
   const handleOpenSubmit = (asgn: any) => {
     if (asgn.status === 'Submitted') return;
@@ -108,15 +116,20 @@ export default function DashboardStudent() {
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h1>{t('studentDashboard')}</h1>
-        <p className="dashboard-subtitle">{t('welcome')}</p>
-        {isDemo && (
-          <div className="demo-badge">
-            <strong>{t('demoMode')}:</strong> {t('demoModeDesc')}
-          </div>
-        )}
+      <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1>{t('studentDashboard')}</h1>
+          <p className="dashboard-subtitle">{t('welcome')}, {user?.firstName || user?.displayName || user?.email || 'Student'}!</p>
+        </div>
+        <button className="btn-primary" onClick={() => setShowRedeem(true)}>
+          {t('redeemCode')}
+        </button>
       </div>
+      {isDemo && (
+        <div className="demo-badge">
+          <strong>{t('demoMode')}:</strong> {t('demoModeDesc')}
+        </div>
+      )}
 
       <div className="grid grid-3">
         <Card className="stat-card">
