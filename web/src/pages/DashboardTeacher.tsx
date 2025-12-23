@@ -2,14 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import { Subjects, Users } from '../lib/firestore';
+import { Submissions } from '../lib/assessments';
 import { db } from '../firebase';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { Modal } from '../components/Modal';
 
 export default function DashboardTeacher() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ subjects: 0, assignments: 0, students: 0 });
   const [submissions, setSubmissions] = useState<any[]>([]);
+  const [selectedSub, setSelectedSub] = useState<any | null>(null);
+  const [grade, setGrade] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [grading, setGrading] = useState(false);
 
   const isDemo = !db;
 
@@ -32,7 +38,7 @@ export default function DashboardTeacher() {
           setStats({
             subjects: s.length,
             assignments: 0, // Placeholder
-            students: u.filter(user => user.role === 'STUDENT').length
+            students: u.filter((user: any) => user.role === 'STUDENT').length
           });
           setSubmissions(subs);
         }
@@ -44,6 +50,32 @@ export default function DashboardTeacher() {
     };
     fetchStats();
   }, [isDemo]);
+
+  const handleOpenGrade = (sub: any) => {
+    setSelectedSub(sub);
+    setGrade(sub.score || '');
+    setFeedback(sub.feedback || '');
+  };
+
+  const handleGrade = async () => {
+    if (!selectedSub || !grade) return;
+    setGrading(true);
+    try {
+      if (!isDemo) {
+        await Submissions.grade(selectedSub.id, {
+          score: Number(grade),
+          rubric: { feedback }
+        });
+      }
+      setSubmissions(submissions.map(s => s.id === selectedSub.id ? { ...s, score: grade, feedback } : s));
+      setSelectedSub(null);
+      alert(t('success'));
+    } catch (e: any) {
+      alert(t('error') + ': ' + e.message);
+    } finally {
+      setGrading(false);
+    }
+  };
 
   if (loading) return <div className="loading-container" style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><LoadingSpinner size="lg" /></div>;
 
@@ -132,7 +164,7 @@ export default function DashboardTeacher() {
                 </div>
               ) : (
                 submissions.map((sub: any) => (
-                  <div key={sub.id} className="activity-item">
+                  <div key={sub.id} className="activity-item clickable" onClick={() => handleOpenGrade(sub)}>
                     <div className="activity-icon">✅</div>
                     <div className="activity-content">
                       <div className="activity-title">
@@ -148,7 +180,53 @@ export default function DashboardTeacher() {
         </Card>
       </div>
 
+      <Modal
+        isOpen={!!selectedSub}
+        onClose={() => setSelectedSub(null)}
+        title={t('gradeSubmission')}
+      >
+        <div className="grading-form">
+          <div className="form-group">
+            <label>{t('student')}: {selectedSub?.studentName}</label>
+          </div>
+          <div className="form-group">
+            <label>{t('pointsObtained')}</label>
+            <input
+              type="number"
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              placeholder="0-100"
+            />
+          </div>
+          <div className="form-group">
+            <label>{t('feedback')}</label>
+            <textarea
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <div className="modal-actions">
+            <button className="btn-secondary" onClick={() => setSelectedSub(null)}>{t('cancel')}</button>
+            <button className="btn-primary" onClick={handleGrade} disabled={grading || !grade}>
+              {grading ? <LoadingSpinner size="sm" /> : t('save')}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       <style>{`
+        .grading-form {
+          display: flex;
+          flex-direction: column;
+          gap: var(--spacing-md);
+        }
+        .activity-item.clickable {
+          cursor: pointer;
+        }
+        .activity-item.clickable:hover {
+          background-color: var(--primary-50);
+        }
         .dashboard-container {
           max-width: 1400px;
           margin: 0 auto;
