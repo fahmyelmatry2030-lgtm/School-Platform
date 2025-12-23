@@ -72,7 +72,7 @@ export default function DashboardAdmin() {
       setUsers(u);
       if (!classGradeId && g.length) setClassGradeId(g[0].id);
     } catch (e: any) {
-      setError(e.message ?? 'Failed to load');
+      setError(e.message ?? t('failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ export default function DashboardAdmin() {
       await seedBasics();
       await refreshAll();
     } catch (e: any) {
-      setError(e.message ?? 'Seed failed');
+      setError(e.message ?? t('seedFailed'));
     } finally {
       setLoading(false);
     }
