@@ -65,19 +65,20 @@ export default function App() {
     );
   }
 
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/';
+  const isLoginPage = location.pathname === '/login';
+  const isHomePage = location.pathname === '/';
 
   return (
-    <div className={`app-container ${isAuthPage ? 'login-layout' : ''}`}>
-      {!isAuthPage && user && (
+    <div className={`app-container ${isLoginPage ? 'login-layout' : ''}`}>
+      {!isLoginPage && (
         <Navbar
-          userName={user.displayName || user.email || ''}
+          userName={user?.displayName || user?.email || ''}
           userRole={role || undefined}
         />
       )}
 
       <div className="app-body">
-        {!isAuthPage && role && <Sidebar userRole={role} />}
+        {!isLoginPage && !isHomePage && role && <Sidebar userRole={role} />}
 
         <main className="app-main">
           <Routes>

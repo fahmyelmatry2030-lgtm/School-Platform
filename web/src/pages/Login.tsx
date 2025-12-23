@@ -182,25 +182,6 @@ export default function Login() {
               </button>
             </form>
 
-            <details className="login-footer-details">
-              <summary className="demo-accounts-summary">
-                {t('demoAccounts') || 'حسابات التجربة (Demo)'}
-              </summary>
-              <div className="demo-accounts">
-                <div className="demo-account" onClick={() => { setEmail('admin@school.local'); setPassword('Admin123!'); }}>
-                  <span className="badge badge-error">Admin</span>
-                  <code>admin@school.local</code>
-                </div>
-                <div className="demo-account" onClick={() => { setEmail('teacher@school.local'); setPassword('Teacher123!'); }}>
-                  <span className="badge badge-primary">Teacher</span>
-                  <code>teacher@school.local</code>
-                </div>
-                <div className="demo-account" onClick={() => { setEmail('student@school.local'); setPassword('Student123!'); }}>
-                  <span className="badge badge-success">Student</span>
-                  <code>student@school.local</code>
-                </div>
-              </div>
-            </details>
           </CardContent>
         </Card>
       </div>
@@ -352,54 +333,6 @@ export default function Login() {
 
         [dir="rtl"] .back-link {
           text-align: right;
-        }
-
-        .login-footer-details {
-          margin-top: var(--spacing-xl);
-          padding-top: var(--spacing-lg);
-          border-top: 1px solid var(--divider-color);
-        }
-
-        .demo-accounts-summary {
-          cursor: pointer;
-          font-size: var(--font-size-sm);
-          font-weight: var(--font-weight-medium);
-          color: var(--text-secondary);
-          text-align: center;
-          list-style: none;
-        }
-
-        .demo-accounts-summary:hover {
-          color: var(--primary-600);
-        }
-
-        .demo-accounts {
-          display: flex;
-          flex-direction: column;
-          gap: var(--spacing-sm);
-          margin-top: var(--spacing-md);
-        }
-
-        .demo-account {
-          display: flex;
-          align-items: center;
-          gap: var(--spacing-sm);
-          padding: var(--spacing-sm);
-          background-color: var(--bg-tertiary);
-          border-radius: var(--radius-md);
-          font-size: var(--font-size-sm);
-          cursor: pointer;
-          transition: background-color var(--transition-fast);
-        }
-
-        .demo-account:hover {
-          background-color: var(--primary-50);
-        }
-
-        .demo-account code {
-          flex: 1;
-          font-family: 'Courier New', monospace;
-          color: var(--text-primary);
         }
 
         @media (max-width: 480px) {
