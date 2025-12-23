@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Modal } from '../components/Modal';
 import { db } from '../firebase';
+import { Codes } from '../lib/codes';
 
 type Grade = { id: string; name: string };
 type Subject = { id: string; name: string; code?: string };
@@ -35,6 +36,9 @@ export default function DashboardAdmin() {
   const [subjectCode, setSubjectCode] = useState('');
   const [className, setClassName] = useState('');
   const [classGradeId, setClassGradeId] = useState('');
+  const [codeSubjectId, setCodeSubjectId] = useState('');
+  const [codeCount, setCodeCount] = useState(10);
+  const [recentCodes, setRecentCodes] = useState<any[]>([]);
 
   async function refreshAll() {
     setLoading(true);
@@ -71,6 +75,10 @@ export default function DashboardAdmin() {
       setClasses(c);
       setUsers(u);
       if (!classGradeId && g.length) setClassGradeId(g[0].id);
+      if (!codeSubjectId && s.length) setCodeSubjectId(s[0].id);
+
+      const cList = await Codes.listAll();
+      setRecentCodes(cList.slice(0, 50)); // Last 50 codes
     } catch (e: any) {
       setError(e.message ?? t('failedToLoad'));
     } finally {
@@ -163,6 +171,20 @@ export default function DashboardAdmin() {
       setEditUser(null);
       await refreshAll();
     } finally { setLoading(false); }
+  }
+
+  async function handleGenerateCodes() {
+    if (!codeSubjectId || codeCount <= 0) return;
+    setLoading(true);
+    try {
+      await Codes.generate(codeSubjectId, codeCount);
+      await refreshAll();
+      alert(t('success'));
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -389,6 +411,60 @@ export default function DashboardAdmin() {
                       >
                         {t('delete')}
                       </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Access Codes */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('accessCodes')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="form-group">
+              <div className="input-with-button-centered">
+                <select value={codeSubjectId} onChange={(e) => setCodeSubjectId(e.target.value)} disabled={loading} title={t('subjects')}>
+                  {subjects.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  value={codeCount}
+                  onChange={(e) => setCodeCount(parseInt(e.target.value))}
+                  placeholder={t('count')}
+                  style={{ maxWidth: '80px' }}
+                  disabled={loading}
+                  title={t('count')}
+                />
+                <button onClick={handleGenerateCodes} disabled={loading || !codeSubjectId} className="btn-primary">
+                  {t('generate')}
+                </button>
+              </div>
+            </div>
+
+            <div className="items-list" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              {recentCodes.length === 0 ? (
+                <div className="empty-state">{t('noData')}</div>
+              ) : (
+                recentCodes.map((c) => (
+                  <div key={c.id} className="list-item" style={{ padding: '8px' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <code style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{c.code}</code>
+                      <span className="item-meta">
+                        {subjects.find(s => s.id === c.subjectId)?.name || '—'}
+                      </span>
+                    </div>
+                    <div>
+                      {c.used ? (
+                        <span className="badge badge-success">{t('active')} ({c.redeemedByName})</span>
+                      ) : (
+                        <span className="badge badge-secondary">{t('inactive')}</span>
+                      )
+                      }
                     </div>
                   </div>
                 ))

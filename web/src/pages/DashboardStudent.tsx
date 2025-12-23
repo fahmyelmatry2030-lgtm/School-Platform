@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -6,6 +6,8 @@ import { RedeemCodeModal } from '../components/RedeemCodeModal';
 import { Submissions, Assignments } from '../lib/assessments';
 import { Subjects } from '../lib/firestore';
 import { auth, db } from '../firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/Modal';
 
 export default function DashboardStudent() {
@@ -46,7 +48,19 @@ export default function DashboardStudent() {
         ]);
       } else {
         const s = await Subjects.list();
-        setCourses(s.map(item => ({ ...item, icon: '📚', teacher: '—' })));
+        let myEnrollments: any[] = [];
+        if (auth.currentUser) {
+          const q = query(collection(db, 'enrollments'), where('studentId', '==', auth.currentUser.uid));
+          const snap = await getDocs(q);
+          myEnrollments = snap.docs.map(d => d.data().subjectId);
+        }
+
+        setCourses(s.map(item => ({
+          ...item,
+          icon: '📚',
+          teacher: '—',
+          locked: !myEnrollments.includes(item.id)
+        })));
 
         let mySubmissions: any[] = [];
         if (auth.currentUser) {
@@ -54,7 +68,7 @@ export default function DashboardStudent() {
         }
 
         setStats({
-          courses: s.length,
+          courses: myEnrollments.length,
           assignments: mySubmissions.length,
           grades: mySubmissions.length > 0 ? `${Math.round(mySubmissions.length * 10)}%` : '0%'
         });
@@ -168,21 +182,30 @@ export default function DashboardStudent() {
                 <div className="empty-state">{t('noCoursesEnrolled')}</div>
               ) : (
                 courses.map((course: any) => (
-                  <div key={course.id} className="course-item">
+                  <div key={course.id} className={`course-card ${course.locked ? 'locked' : ''}`}>
+                    <div className="course-icon">{course.locked ? '🔒' : course.icon}</div>
                     <div className="course-info">
-                      <span className="course-icon">{course.icon}</span>
-                      <div>
-                        <div className="course-name">{course.name}</div>
-                        <div className="course-teacher">{course.teacher}</div>
-                      </div>
+                      <div className="course-name">{course.name}</div>
+                      <div className="course-teacher">{course.teacher}</div>
                     </div>
-                    <span className="badge badge-success">{t('enrolled')}</span>
+                    {!course.locked && (
+                      <button className="btn-outline btn-sm">{t('viewDetails')}</button>
+                    )}
+                    {course.locked && (
+                      <button className="btn-secondary btn-sm" onClick={() => setShowRedeem(true)}>{t('enroll')}</button>
+                    )}
                   </div>
                 ))
               )}
             </div>
           </CardContent>
         </Card>
+
+        <style>{`
+          .course-card.locked {
+            opacity: 0.7;
+          }
+        `}</style>
 
         <Card>
           <CardHeader>
