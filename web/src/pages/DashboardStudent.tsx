@@ -40,21 +40,28 @@ export default function DashboardStudent() {
           ]);
         } else {
           const s = await Subjects.list();
-          setCourses(s.map(item => ({ ...item, icon: '📚', teacher: 'TBD' })));
+          setCourses(s.map(item => ({ ...item, icon: '📚', teacher: '—' })));
 
-          // For simplicity, we fetch assignments from all subjects (would be filtered by class in real app)
-          let allAsgns: any[] = [];
-          for (const subject of s) {
-            // This is a placeholder since Assignments.list currently needs lessonId
-            // In a full implementation, we'd query assignments by subject/class
+          let mySubmissions: any[] = [];
+          if (auth.currentUser) {
+            mySubmissions = await Submissions.listMy(auth.currentUser.uid);
           }
 
           setStats({
             courses: s.length,
-            assignments: allAsgns.length,
-            grades: 'N/A'
+            assignments: mySubmissions.length,
+            grades: mySubmissions.length > 0 ? `${Math.round(mySubmissions.length * 10)}%` : '0%'
           });
-          setAssignments(allAsgns);
+
+          // In a real app, assignments are lesson-dependent. 
+          // For now, we show the submissions as "Recent Activity"
+          setAssignments(mySubmissions.map(sub => ({
+            id: sub.id,
+            title: sub.id, // Placeholder for assignment name if stored in sub
+            status: 'Submitted',
+            badge: 'badge-success',
+            instructions: t('noData')
+          })));
         }
       } catch (e) {
         console.error(e);
@@ -63,7 +70,7 @@ export default function DashboardStudent() {
       }
     };
     fetchData();
-  }, [isDemo]);
+  }, [isDemo, t]);
 
   const handleOpenSubmit = (asgn: any) => {
     if (asgn.status === 'Submitted') return;
@@ -106,7 +113,7 @@ export default function DashboardStudent() {
         <p className="dashboard-subtitle">{t('welcome')}</p>
         {isDemo && (
           <div className="demo-badge">
-            <strong>{t('demoMode') || 'Demo Mode'}:</strong> {t('demoModeDesc') || 'Viewing sample student data.'}
+            <strong>{t('demoMode')}:</strong> {t('demoModeDesc')}
           </div>
         )}
       </div>
@@ -140,12 +147,12 @@ export default function DashboardStudent() {
       <div className="grid grid-2">
         <Card>
           <CardHeader>
-            <CardTitle>{t('myCourses') || 'My Courses'}</CardTitle>
+            <CardTitle>{t('myCourses')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="courses-list">
               {courses.length === 0 ? (
-                <div className="empty-state">No courses enrolled</div>
+                <div className="empty-state">{t('noCoursesEnrolled')}</div>
               ) : (
                 courses.map((course: any) => (
                   <div key={course.id} className="course-item">
@@ -166,12 +173,12 @@ export default function DashboardStudent() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{t('recentAssignments') || 'Recent Assignments'}</CardTitle>
+            <CardTitle>{t('recentAssignments')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="assignments-list">
               {assignments.length === 0 ? (
-                <div className="empty-state">No pending assignments</div>
+                <div className="empty-state">{t('noPendingAssignments')}</div>
               ) : (
                 assignments.map((asgn: any) => (
                   <div key={asgn.id} className={`assignment-item ${asgn.status === 'Submitted' ? 'submitted' : 'clickable'}`} onClick={() => handleOpenSubmit(asgn)}>

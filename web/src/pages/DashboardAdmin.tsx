@@ -404,7 +404,7 @@ export default function DashboardAdmin() {
         onClose={() => setDeleteModal({ open: false, type: '', id: '', name: '' })}
         title={t('confirmDelete')}
       >
-        <p>Are you sure you want to delete <strong>{deleteModal.name}</strong>?</p>
+        <p>{t('confirmDeleteText', { name: deleteModal.name })}</p>
         <div className="modal-actions">
           <button onClick={handleDelete} disabled={loading} className="btn-danger w-full">
             {loading ? <LoadingSpinner size="sm" /> : t('delete')}
@@ -459,7 +459,7 @@ export default function DashboardAdmin() {
               </select>
             </div>
             <div className="form-group">
-              <label>Status</label>
+              <label>{t('userStatus')}</label>
               <div className="status-radio-group">
                 <label className="radio-label">
                   <input
