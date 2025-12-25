@@ -145,5 +145,12 @@
     "teacherBio": "Teacher Bio",
     "qualifications": "Qualifications",
     "experience": "Message from the Teacher",
-    "contactInfo": "Contact Information"
+    "contactInfo": "Contact Information",
+    "register": "Register",
+    "createAccount": "Create Account",
+    "fullName": "Full Name",
+    "confirmPassword": "Confirm Password",
+    "alreadyHaveAccount": "Already have an account? Login",
+    "dontHaveAccount": "Don't have an account? Register",
+    "passwordsDoNotMatch": "Passwords do not match"
 }

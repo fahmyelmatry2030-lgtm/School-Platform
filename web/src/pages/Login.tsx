@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider, isConfigured } from '../firebase';
+import { signInWithEmailAndPassword, signInWithPopup, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth, db, googleProvider, isConfigured } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../components/Card';
@@ -10,6 +11,9 @@ export default function Login() {
   const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('admin@school.local');
   const [password, setPassword] = useState('Admin123!');
+  const [fullName, setFullName] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -31,6 +35,16 @@ export default function Login() {
     if (!password || password.length < 6) {
       setError(t('passwordTooShort'));
       return false;
+    }
+    if (isRegistering) {
+      if (!fullName.trim()) {
+        setError(t('required'));
+        return false;
+      }
+      if (password !== confirmPassword) {
+        setError(t('passwordsDoNotMatch'));
+        return false;
+      }
     }
     return true;
   };
@@ -77,6 +91,15 @@ export default function Login() {
           'student@school.local': { role: 'STUDENT', path: '/student' }
         };
 
+        if (isRegistering) {
+          // Mock Registration
+          localStorage.setItem('demo_role', 'STUDENT');
+          localStorage.setItem('demo_email', email);
+          localStorage.setItem('demo_name', fullName);
+          window.location.href = '/student';
+          return;
+        }
+
         const demoUser = demoUsers[email];
         if (demoUser && (password === 'Admin123!' || password === 'Teacher123!' || password === 'Student123!')) {
           // Set demo session
@@ -93,18 +116,59 @@ export default function Login() {
     }
 
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      const token = await cred.user.getIdTokenResult();
-      const role = token.claims.role as string | undefined;
+      if (isRegistering) {
+        // Registration Logic
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(cred.user, {
+          displayName: fullName
+        });
 
-      if (role === 'ADMIN') navigate('/admin');
-      else if (role === 'TEACHER') navigate('/teacher');
-      else navigate('/student');
+        if (db) {
+          await setDoc(doc(db, 'users', cred.user.uid), {
+            email: email,
+            role: 'STUDENT',
+            displayName: fullName,
+            createdAt: new Date()
+          });
+        }
+
+        navigate('/student');
+      } else {
+        // Login Logic
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        const token = await cred.user.getIdTokenResult();
+        const role = token.claims.role as string | undefined;
+
+        if (role === 'ADMIN') navigate('/admin');
+        else if (role === 'TEACHER') navigate('/teacher');
+        else navigate('/student');
+      }
     } catch (e: any) {
       console.error(e);
+      // Fallback to Demo Registration if real auth fails (for dev with partial config)
+      if (isRegistering) {
+        console.warn('Real registration failed. Falling back to Demo Mode.');
+        localStorage.setItem('demo_role', 'STUDENT');
+        localStorage.setItem('demo_email', email);
+        localStorage.setItem('demo_name', fullName);
+        window.location.href = '/student';
+        return;
+      }
       setError(t('loginError'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleMode = () => {
+    setIsRegistering(!isRegistering);
+    setError(null);
+    if (!isRegistering) {
+      setEmail('');
+      setPassword('');
+    } else {
+      setEmail('');
+      setPassword('');
     }
   };
 
@@ -144,7 +208,9 @@ export default function Login() {
               </Link>
               <div className="login-icon">🎓</div>
               <h1 className="login-title">{t('schoolPlatform')}</h1>
-              <p className="login-subtitle">{t('welcome')}</p>
+              <p className="login-subtitle">
+                {isRegistering ? t('createAccount') : t('welcome')}
+              </p>
               {!isConfigured && (
                 <div className="demo-badge">
                   {t('demoMode') || 'DEMO MODE'}
@@ -153,6 +219,19 @@ export default function Login() {
             </div>
 
             <form onSubmit={submit} className="login-form">
+              {isRegistering && (
+                <div className="form-group">
+                  <label htmlFor="fullname">{t('fullName')}</label>
+                  <input
+                    id="fullname"
+                    type="text"
+                    placeholder={t('fullName')}
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              )}
               <div className="form-group">
                 <label htmlFor="email">{t('email')}</label>
                 <input
@@ -179,6 +258,20 @@ export default function Login() {
                 />
               </div>
 
+              {isRegistering && (
+                <div className="form-group">
+                  <label htmlFor="confirmPassword">{t('confirmPassword')}</label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder={t('confirmPassword')}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              )}
+
               {error && (
                 <div className="alert alert-error">
                   {error}
@@ -196,7 +289,7 @@ export default function Login() {
                     <span>{t('loading')}</span>
                   </>
                 ) : (
-                  t('login')
+                  isRegistering ? t('register') : t('login')
                 )}
               </button>
 
@@ -218,6 +311,18 @@ export default function Login() {
                 />
                 <span>{t('signInWithGoogle') || 'Sign in with Google'}</span>
               </button>
+
+              <div className="text-center mt-4">
+                <button
+                  type="button"
+                  onClick={toggleMode}
+                  className="text-primary hover:underline text-sm bg-transparent border-0 cursor-pointer"
+                >
+                  {isRegistering
+                    ? t('alreadyHaveAccount')
+                    : (t('dontHaveAccount') || "Don't have an account? Register")}
+                </button>
+              </div>
             </form>
 
           </CardContent>

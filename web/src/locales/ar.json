@@ -163,5 +163,12 @@
     "teacherBio": "نبذة عن المعلمة",
     "qualifications": "المؤهلات العلمية",
     "experience": "كلمة المعلمة",
-    "contactInfo": "بيانات التواصل"
+    "contactInfo": "بيانات التواصل",
+    "register": "تسجيل حساب",
+    "createAccount": "إنشاء حساب جديد",
+    "fullName": "الاسم الكامل",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "alreadyHaveAccount": "لديك حساب بالفعل؟ سجل دخولك",
+    "dontHaveAccount": "ليس لديك حساب؟ سجل الآن",
+    "passwordsDoNotMatch": "كلمات المرور غير متطابقة"
 }

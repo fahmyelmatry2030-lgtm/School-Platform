@@ -57,7 +57,7 @@ export const Navbar: React.FC<NavbarProps> = ({ userName, userRole }) => {
                 }}
             >
                 {/* Logo and Title */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-xl)' }}>
                     <Link
                         to="/"
                         style={{
@@ -65,19 +65,27 @@ export const Navbar: React.FC<NavbarProps> = ({ userName, userRole }) => {
                             fontWeight: 'var(--font-weight-bold)',
                             color: 'var(--primary-600)',
                             textDecoration: 'none',
-                            fontFamily: 'var(--font-family-heading)'
+                            fontFamily: 'var(--font-family-heading)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--spacing-xs)'
                         }}
                     >
-                        🎓 {t('schoolPlatform')}
+                        <span>🎓</span>
+                        <span>{t('schoolPlatform')}</span>
                     </Link>
 
                     <Link
                         to="/about"
+                        className="nav-link"
                         style={{
                             textDecoration: 'none',
                             color: 'var(--text-secondary)',
                             fontWeight: 'var(--font-weight-medium)',
-                            fontSize: 'var(--font-size-md)'
+                            fontSize: 'var(--font-size-md)',
+                            padding: 'var(--spacing-xs) var(--spacing-md)',
+                            borderRadius: 'var(--radius-md)',
+                            transition: 'all 0.2s ease',
                         }}
                     >
                         {t('aboutUs')}
@@ -136,7 +144,14 @@ export const Navbar: React.FC<NavbarProps> = ({ userName, userRole }) => {
                     )}
                 </div>
             </div>
-        </nav>
+
+            <style>{`
+                .nav-link:hover {
+                    background-color: var(--primary-50);
+                    color: var(--primary-700) !important;
+                }
+            `}</style>
+        </nav >
     );
 };
 
