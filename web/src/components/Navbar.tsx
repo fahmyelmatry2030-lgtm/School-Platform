@@ -70,6 +70,18 @@ export const Navbar: React.FC<NavbarProps> = ({ userName, userRole }) => {
                     >
                         🎓 {t('schoolPlatform')}
                     </Link>
+
+                    <Link
+                        to="/about"
+                        style={{
+                            textDecoration: 'none',
+                            color: 'var(--text-secondary)',
+                            fontWeight: 'var(--font-weight-medium)',
+                            fontSize: 'var(--font-size-md)'
+                        }}
+                    >
+                        {t('aboutUs')}
+                    </Link>
                 </div>
 
                 {/* Right Side */}

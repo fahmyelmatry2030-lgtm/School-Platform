@@ -140,11 +140,10 @@
     "generate": "Generate",
     "count": "Count",
     "feedback": "Teacher Feedback",
-    "register": "Register",
-    "createAccount": "Create Account",
-    "fullName": "Full Name",
-    "confirmPassword": "Confirm Password",
-    "alreadyHaveAccount": "Already have an account?",
-    "dontHaveAccount": "Don't have an account?",
-    "passwordsDoNotMatch": "Passwords do not match"
+    "aboutUs": "About Us",
+    "ourMission": "Our Mission",
+    "teacherBio": "Teacher Bio",
+    "qualifications": "Qualifications",
+    "experience": "Message from the Teacher",
+    "contactInfo": "Contact Information"
 }

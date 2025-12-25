@@ -4,6 +4,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db, isConfigured } from './firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import Home from './pages/Home';
+import About from './pages/About';
 import Login from './pages/Login';
 import DashboardAdmin from './pages/DashboardAdmin';
 import DashboardTeacher from './pages/DashboardTeacher';
@@ -97,6 +98,7 @@ export default function App() {
         <main className="app-main">
           <Routes>
             <Route path="/" element={user ? <Navigate to={`/${role?.toLowerCase()}`} replace /> : <Home />} />
+            <Route path="/about" element={<About />} />
             <Route path="/login" element={user ? <Navigate to={`/${role?.toLowerCase()}`} replace /> : <Login />} />
 
             {/* Admin Routes */}

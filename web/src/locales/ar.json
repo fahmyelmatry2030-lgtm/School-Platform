@@ -158,11 +158,10 @@
     "generate": "توليد",
     "count": "العدد",
     "feedback": "ملاحظات المعلم",
-    "register": "تسجيل حساب جديد",
-    "createAccount": "إنشاء حساب",
-    "fullName": "الاسم الكامل",
-    "confirmPassword": "تأكيد كلمة المرور",
-    "alreadyHaveAccount": "لديك حساب بالفعل؟",
-    "dontHaveAccount": "ليس لديك حساب؟",
-    "passwordsDoNotMatch": "كلمات المرور غير متطابقة"
+    "aboutUs": "من نحن",
+    "ourMission": "رؤيتنا ورسالتنا",
+    "teacherBio": "نبذة عن المعلمة",
+    "qualifications": "المؤهلات العلمية",
+    "experience": "كلمة المعلمة",
+    "contactInfo": "بيانات التواصل"
 }
