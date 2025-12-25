@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth, db } from './firebase';
+import { auth, db, isConfigured } from './firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -23,7 +23,21 @@ export default function App() {
   const location = useLocation();
 
   useEffect(() => {
-    if (!auth) {
+    if (!auth || !isConfigured) {
+      console.log('App: Firebase not configured. Checking for demo session.');
+      // Check local storage for demo session
+      const demoRole = localStorage.getItem('demo_role') as UserRole;
+      const demoEmail = localStorage.getItem('demo_email');
+      const demoName = localStorage.getItem('demo_name');
+
+      if (demoRole && demoEmail) {
+        setUser({
+          email: demoEmail,
+          uid: 'demo-' + demoRole.toLowerCase(),
+          displayName: demoName || 'Demo ' + demoRole
+        } as User);
+        setRole(demoRole);
+      }
       setLoading(false);
       return;
     }

@@ -15,6 +15,14 @@ export const Navbar: React.FC<NavbarProps> = ({ userName, userRole }) => {
 
     const handleLogout = async () => {
         try {
+            // Check for demo session
+            if (localStorage.getItem('demo_email')) {
+                localStorage.removeItem('demo_email');
+                localStorage.removeItem('demo_role');
+                window.location.href = '/login';
+                return;
+            }
+
             await signOut(auth);
             navigate('/login');
         } catch (error) {

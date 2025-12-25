@@ -157,5 +157,12 @@
     "invalidCode": "كود غير صالح أو مستخدم مسبقاً",
     "generate": "توليد",
     "count": "العدد",
-    "feedback": "ملاحظات المعلم"
+    "feedback": "ملاحظات المعلم",
+    "register": "تسجيل حساب جديد",
+    "createAccount": "إنشاء حساب",
+    "fullName": "الاسم الكامل",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "alreadyHaveAccount": "لديك حساب بالفعل؟",
+    "dontHaveAccount": "ليس لديك حساب؟",
+    "passwordsDoNotMatch": "كلمات المرور غير متطابقة"
 }
